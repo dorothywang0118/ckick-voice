@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>唱歌跳跳</title>
+<style>
+:root{
+  --bg:#fff6ea; --ink:#4a3a2e; --soft:#8a7462; --card:#fffdf8; --line:#f0dcc4;
+  --accent:#ff8a65; --accent2:#ffc14d; --good:#5fb87a; --sky1:#bfe6ff; --sky2:#fff1dc;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#231c26; --ink:#f6eadf; --soft:#c7b4a6; --card:#2f2633; --line:#4a3c4f; }
+}
+:root[data-theme="dark"]{ --bg:#231c26; --ink:#f6eadf; --soft:#c7b4a6; --card:#2f2633; --line:#4a3c4f; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:rgba(255,246,234,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:5}
+.ov.hide{display:none}
+.card{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:22px 20px;
+  width:min(380px,100%);text-align:center;box-shadow:0 10px 30px rgba(120,80,40,.15)}
+h1{margin:4px 0 6px;font-size:30px;letter-spacing:2px}
+h2{margin:2px 0 8px;font-size:22px}
+p{margin:6px 0;line-height:1.6;color:var(--soft);font-size:15px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;
+  padding:14px 12px;border:0;border-radius:16px;font-size:18px;font-weight:700;font-family:inherit;
+  background:var(--accent);color:#fff;box-shadow:0 4px 0 #e0623d;cursor:pointer}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #e0623d}
+.btn.alt{background:var(--accent2);color:#5a3b00;box-shadow:0 4px 0 #d99a1c}
+.btn.ghost{background:transparent;color:var(--soft);box-shadow:none;border:2px solid var(--line);font-size:15px;padding:10px}
+.btn svg{width:22px;height:22px}
+.small{font-size:13px}
+.meterbox{margin:14px auto 4px;height:22px;border-radius:11px;background:var(--line);overflow:hidden;position:relative}
+.meterbox i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#7fd1a0,#ffc14d,#ff8a65);transition:width .08s}
+.big{font-size:34px;font-weight:800;color:var(--ink);margin:6px 0}
+.row{display:flex;gap:10px}.row .btn{flex:1}
+#hint{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:4;
+  font-size:13px;color:#6b5646;background:rgba(255,255,255,.75);padding:6px 12px;border-radius:12px;pointer-events:none;white-space:nowrap}
+#pauseBtn{position:fixed;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:4;
+  width:44px;height:44px;border-radius:14px;border:2px solid #f0dcc4;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center}
+#pauseBtn svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<button id="pauseBtn" aria-label="暫停"><svg viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1.5" fill="#8a7462"/><rect x="12" y="3" width="4" height="14" rx="1.5" fill="#8a7462"/></svg></button>
+<div id="hint" style="display:none"></div>
+
+<!-- 開始畫面 -->
+<div class="ov" id="ovStart"><div class="card">
+  <h1>唱歌跳跳</h1>
+  <p>小雞「啾啾」要跑過草地！<br>你發出的聲音越<b>高</b>，牠跳得越<b>高</b>；<br>聲音低低的，就輕輕跳一下。</p>
+  <button class="btn" id="bMic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>用聲音玩</button>
+  <button class="btn alt" id="bTouch">用手指玩</button>
+  <p class="small" id="bestTxt"></p>
+</div></div>
+
+<!-- 麥克風授權 -->
+<div class="ov hide" id="ovPerm"><div class="card">
+  <h2>需要用到麥克風</h2>
+  <p>啾啾要「聽」你的聲音才知道跳多高。<br>按下面的按鈕後，手機會跳出詢問視窗，<br>請選<b>「允許」</b>。</p>
+  <p class="small">聲音只在手機裡即時分析，不會錄音、也不會傳出去。</p>
+  <button class="btn" id="bPermAsk">允許使用麥克風</button>
+  <div id="permErr" style="display:none;text-align:left;margin-top:12px;padding:12px;border-radius:14px;background:#fff1e6;color:#6b4a33;font-size:14px;line-height:1.65"></div>
+  <div class="row"><button class="btn ghost" id="bPermTouch">先用手指玩</button><button class="btn ghost" id="bPermBack">回首頁</button></div>
+</div></div>
+
+<!-- 校正 -->
+<div class="ov hide" id="ovCal"><div class="card">
+  <h2 id="calTitle">先試試你的聲音</h2>
+  <p id="calMsg"></p>
+  <div class="big" id="calNote">—</div>
+  <div class="meterbox"><i id="calVol"></i></div>
+  <p class="small" id="calSub">音量條有動就代表收得到聲音</p>
+  <button class="btn" id="bCalGo">開始錄「最低音」</button>
+  <button class="btn ghost" id="bCalSkip">跳過，用預設音域</button>
+</div></div>
+
+<!-- 暫停 / 結束 -->
+<div class="ov hide" id="ovEnd"><div class="card">
+  <h2 id="endTitle">跑完囉！</h2>
+  <div class="big" id="endScore">0</div>
+  <p id="endSub"></p>
+  <button class="btn" id="bAgain">再跑一次</button>
+  <div class="row"><button class="btn ghost" id="bRecal">重新校正聲音</button><button class="btn ghost" id="bHome">回首頁</button></div>
+</div></div>
+
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const cv=$('cv'), cx=cv.getContext('2d');
+const LH=600, GY=500;               // 世界高度、地面
+const CHX=120, CHW=40, CHH=40;      // 小雞位置與大小
+const G=1500;                       // 重力
+const HMIN=55, HMAX=330;            // 最低/最高跳躍高度
+let LW=400, SC=1, DPR=1, OY=0;
+
+function store(k,v){try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){return null}}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(innerWidth*DPR); cv.height=Math.round(innerHeight*DPR);
+  SC=Math.min(cv.height/LH, cv.width/440); LW=cv.width/SC; OY=cv.height/SC-LH; // 直式手機：多看到前方，上面多出天空
+}
+addEventListener('resize',resize); resize();
+
+/* ---------------- 聲音輸入與音高偵測 ---------------- */
+const mic={on:false, ctx:null, an:null, buf:null, f:0, rms:0, clarity:0, noise:0.004, voicedFrames:0, hist:[]};
+let lowHz=+(store('sj_low')||0)||165, highHz=+(store('sj_high')||0)||560;
+
+async function startMic(){
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!mic.ctx) mic.ctx=new AC();
+  const rs=mic.ctx.state==='suspended'?mic.ctx.resume():null; // 在點擊當下同步啟動（iPhone 需要）
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('nomedia');
+  const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false}});
+  try{ if(rs) await rs; if(mic.ctx.state!=='running') await mic.ctx.resume(); }catch(e){}
+  const src=mic.ctx.createMediaStreamSource(st);
+  mic.an=mic.ctx.createAnalyser(); mic.an.fftSize=2048;
+  src.connect(mic.an);
+  mic.buf=new Float32Array(mic.an.fftSize);
+  mic.on=true;
+}
+
+// NSDF（McLeod 法）音高偵測
+function detect(){
+  if(!mic.on) return;
+  const b=mic.buf; mic.an.getFloatTimeDomainData(b);
+  const sr=mic.ctx.sampleRate, W=1024;
+  let s=0; for(let i=0;i<b.length;i++) s+=b[i]*b[i];
+  const rms=Math.sqrt(s/b.length); mic.rms=rms;
+  // 慢慢追蹤環境噪音
+  if(rms<mic.noise*1.8) mic.noise=mic.noise*0.97+rms*0.03; else mic.noise=Math.min(0.05,mic.noise*1.0008);
+  const thr=Math.max(0.012,mic.noise*3.2);
+  if(rms<thr){mic.f=0;mic.clarity=0;return;}
+  const minLag=Math.floor(sr/1100), maxLag=Math.min(Math.floor(sr/75),b.length-W-1);
+  const nsdf=new Float32Array(maxLag+2);
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let r=0,m=0;
+    for(let i=0;i<W;i++){const a=b[i],c=b[i+lag]; r+=a*c; m+=a*a+c*c;}
+    nsdf[lag]=m>0?2*r/m:0;
+  }
+  // 找所有正區段的峰值
+  let peaks=[], maxV=0, i=minLag;
+  while(i<maxLag && nsdf[i]>0) i++;
+  while(i<maxLag){
+    while(i<maxLag && nsdf[i]<=0) i++;
+    let pk=-1,pv=-1;
+    while(i<maxLag && nsdf[i]>0){ if(nsdf[i]>pv){pv=nsdf[i];pk=i;} i++; }
+    if(pk>0){peaks.push(pk); if(pv>maxV) maxV=pv;}
+  }
+  if(maxV<0.6){mic.f=0;mic.clarity=maxV;return;}
+  let lag=peaks.find(p=>nsdf[p]>=maxV*0.88);
+  const a=nsdf[lag-1],c=nsdf[lag],d=nsdf[lag+1];
+  const sh=(a-d)/(2*(a-2*c+d)||1);
+  const f=sr/(lag+(isFinite(sh)?Math.max(-1,Math.min(1,sh)):0));
+  mic.f=(f>70&&f<1200)?f:0; mic.clarity=maxV;
+}
+function pitch01(f){ // 音高換成 0..1
+  if(!f) return 0;
+  const t=(Math.log2(f)-Math.log2(lowHz))/(Math.log2(highHz)-Math.log2(lowHz));
+  return Math.max(0,Math.min(1,t));
+}
+const NN=['Do','Do#','Re','Re#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'];
+function noteName(f){ if(!f) return '—'; const n=Math.round(12*Math.log2(f/440)+69); return NN[(n%12+12)%12]+(Math.floor(n/12)-1); }
+
+/* ---------------- 小音效（很小聲，避免被麥克風收進去） ---------------- */
+let sfxCtx=null;
+function sfx(type){
+  try{
+    const c=mic.ctx||sfxCtx||(sfxCtx=new (window.AudioContext||window.webkitAudioContext)());
+    if(c.state==='suspended') c.resume();
+    const o=c.createOscillator(), g=c.createGain(), t=c.currentTime;
+    const vol=mode==='mic'?0.025:0.08;
+    o.connect(g); g.connect(c.destination);
+    if(type==='star'){o.type='triangle';o.frequency.setValueAtTime(1320,t);o.frequency.setValueAtTime(1760,t+.06);}
+    else if(type==='hit'){o.type='square';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(90,t+.25);}
+    else {o.type='sine';o.frequency.setValueAtTime(500,t);o.frequency.exponentialRampToValueAtTime(900,t+.12);}
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+.28);
+    o.start(t); o.stop(t+.3);
+  }catch(e){}
+}
+
+/* ---------------- 遊戲狀態 ---------------- */
+let mode='touch', state='menu';   // menu | cal | play | pause | over
+let chick, obs, stars, parts, speed, dist, starCount, lives, inv, spawnIn, tGame, lastT=0, preview=0, touchPreviewT=0;
+let best=+(store('sj_best')||0)||0;
+function bestLine(){ $('bestTxt').textContent=best?('最佳紀錄：'+best+' 分'):'對著手機唱「啊～」就可以跳'; }
+bestLine();
+
+function reset(){
+  chick={y:0,vy:0,air:false,squash:0,run:0,hitT:0};
+  obs=[];stars=[];parts=[];speed=175;dist=0;starCount=0;lives=3;inv=0;spawnIn=1.6;tGame=0;
+}
+reset();
+
+function jump01(p){
+  if(chick.air) return false;
+  const h=HMIN+p*(HMAX-HMIN);
+  chick.vy=Math.sqrt(2*G*h); chick.air=true; chick.squash=-0.25;
+  sfx('jump'); return true;
+}
+
+// 產生障礙（每一種都保證跳得過）
+function spawn(){
+  const lvl=Math.min(1,tGame/120);
+  const r=Math.random();
+  const x=LW+40;
+  if(r<0.34){ // 矮草叢：隨便跳一下就過
+    obs.push({k:'bush',x,w:38,h:32});
+    if(Math.random()<.5) stars.push({x:x+19,y:105,got:false});
+  }else if(r<0.72){ // 布丁塔：高度要用音高決定
+    const h=Math.round(70+Math.random()*(190+lvl*40));
+    obs.push({k:'tower',x,w:46,h});
+    stars.push({x:x+23,y:h+60,got:false});
+  }else{ // 草叢＋上方小鳥：只能「低低跳」
+    obs.push({k:'bush',x,w:36,h:30});
+    obs.push({k:'bird',x:x-8,w:52,h:28,bot:150+Math.random()*20,ph:Math.random()*6});
+  }
+  const gap=1.55-lvl*0.5+Math.random()*0.9;
+  spawnIn=gap;
+}
+
+function rectHit(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
+
+function update(dt){
+  detect();
+  // 聲音觸發跳躍
+  if(mode==='mic'){
+    if(mic.f){ mic.voicedFrames++; mic.hist.push(mic.f); if(mic.hist.length>5) mic.hist.shift(); }
+    else { mic.voicedFrames=0; mic.hist.length=0; }
+    const p=mic.f?pitch01(median(mic.hist)):0;
+    preview=preview*0.6+p*0.4;
+    if(state==='play' && mic.voicedFrames>=3 && !chick.air && chick.hitT<=0) jump01(pitch01(median(mic.hist)));
+  }else{
+    touchPreviewT-=dt; if(touchPreviewT<=0) preview*=0.9;
+  }
+  if(state!=='play') return;
+
+  tGame+=dt;
+  speed=175+Math.min(150,tGame*1.3);
+  dist+=speed*dt;
+  // 小雞物理
+  if(chick.air){
+    chick.vy-=G*dt; chick.y+=chick.vy*dt;
+    if(chick.y<=0){chick.y=0;chick.vy=0;chick.air=false;chick.squash=0.3;}
+  }
+  chick.squash*=0.85; chick.run+=dt*speed/18;
+  if(chick.hitT>0) chick.hitT-=dt;
+  if(inv>0) inv-=dt;
+
+  spawnIn-=dt; if(spawnIn<=0) spawn();
+  for(const o of obs) o.x-=speed*dt;
+  for(const s of stars) s.x-=speed*dt;
+  obs=obs.filter(o=>o.x>-80); stars=stars.filter(s=>s.x>-40&&!s.done);
+
+  // 碰撞（world 高度：往上為正）
+  const m=6, cxL=CHX-CHW/2+m, cw=CHW-2*m, cb=chick.y+3, ch=CHH-8;
+  if(inv<=0){
+    for(const o of obs){
+      let hit=false;
+      if(o.k==='bird') hit=rectHit(cxL,cb,cw,ch,o.x+6,o.bot,o.w-12,o.h-6);
+      else hit=rectHit(cxL,cb,cw,ch,o.x+4,0,o.w-8,o.h);
+      if(hit){ lives--; inv=1.4; chick.hitT=0.5; sfx('hit'); burst(CHX,chick.y+20,'#ff8a65',10);
+        if(lives<=0){ gameOver(); return; } break; }
+    }
+  }
+  for(const s of stars){
+    if(!s.got && Math.abs(s.x-CHX)<26 && Math.abs((chick.y+20)-s.y)<30){ s.got=true; s.done=true; starCount++; sfx('star'); burst(s.x,s.y,'#ffc14d',8); }
+  }
+  for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=600*dt;p.t-=dt;}
+  parts=parts.filter(p=>p.t>0);
+}
+function median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); return s[s.length>>1]; }
+function burst(x,y,col,n){for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.random()-.5)*260,vy:Math.random()*260+60,t:.6,col});}
+function score(){return Math.floor(dist/40)+starCount*10;}
+
+/* ---------------- 繪圖 ---------------- */
+const Y=h=>GY-h; // world 高度轉畫面 y
+function draw(){
+  cx.setTransform(SC,0,0,SC,0,OY*SC);
+  // 天空
+  const g=cx.createLinearGradient(0,-OY,0,GY); g.addColorStop(0,'#a9dcff'); g.addColorStop(1,'#fff1dc');
+  cx.fillStyle=g; cx.fillRect(0,-OY,LW,LH+OY);
+  // 太陽
+  cx.fillStyle='#ffe08a'; cx.beginPath(); cx.arc(LW-70,90,34,0,7); cx.fill();
+  // 雲
+  const sc=(dist*0.1)%(LW+200);
+  cx.fillStyle='rgba(255,255,255,.9)';
+  for(let i=0;i<4;i++){const x=((i*260-sc)%(LW+200)+LW+200)%(LW+200)-100, y=70+i*37%90; cloud(x,y);}
+  // 遠山
+  hills(dist*0.25,'#cdeac0',GY-60,90,260);
+  hills(dist*0.5,'#a8dba0',GY-25,60,180);
+  // 地面
+  cx.fillStyle='#8fcf7e'; cx.fillRect(0,GY,LW,LH-GY);
+  cx.fillStyle='#7bbd6b';
+  const off=dist%40; for(let x=-off;x<LW;x+=40){cx.fillRect(x,GY+14,20,6);}
+  cx.fillStyle='#c9a77c'; cx.fillRect(0,GY+40,LW,LH-GY-40);
+  cx.fillStyle='#b8946a'; for(let x=-(dist%60);x<LW;x+=60){cx.beginPath();cx.arc(x+10,GY+70,4,0,7);cx.fill();}
+
+  // 預測跳躍高度線
+  if(state==='play'||state==='cal'||state==='menu'){
+    const hasSig=(mode==='mic'?mic.f>0:touchPreviewT>0);
+    if(hasSig){
+      const ph=HMIN+preview*(HMAX-HMIN)+CHH;
+      cx.save(); cx.setLineDash([8,8]); cx.strokeStyle='rgba(255,138,101,.85)'; cx.lineWidth=3;
+      cx.beginPath(); cx.moveTo(CHX-40,Y(ph)); cx.lineTo(CHX+170,Y(ph)); cx.stroke(); cx.restore();
+    }
+  }
+
+  for(const s of stars) if(!s.got) star(s.x,Y(s.y),12);
+  for(const o of obs){
+    if(o.k==='bush') bush(o); else if(o.k==='tower') tower(o); else bird(o);
+  }
+  drawChick();
+  for(const p of parts){cx.globalAlpha=Math.max(0,p.t/.6);cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,Y(p.y),4,0,7);cx.fill();}
+  cx.globalAlpha=1;
+  drawMeter();
+  if(state==='play'||state==='pause') hud();
+}
+function cloud(x,y){cx.beginPath();cx.arc(x,y,22,0,7);cx.arc(x+24,y-10,26,0,7);cx.arc(x+52,y,20,0,7);cx.rect(x,y,52,18);cx.fill();}
+function hills(o,col,base,amp,wl){
+  cx.fillStyle=col; cx.beginPath(); cx.moveTo(0,GY);
+  for(let x=0;x<=LW+10;x+=10){cx.lineTo(x,base-amp*(.5+.5*Math.sin((x+o)/wl*Math.PI*2))*.6-amp*.3*Math.sin((x+o)/(wl*.37)));}
+  cx.lineTo(LW,GY); cx.fill();
+}
+function star(x,y,r){
+  cx.fillStyle='#ffc93c'; cx.strokeStyle='#e8a317'; cx.lineWidth=2; cx.beginPath();
+  for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5, rr=i%2?r*.48:r; cx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}
+  cx.closePath(); cx.fill(); cx.stroke();
+}
+function bush(o){
+  const x=o.x, y=GY;
+  cx.fillStyle='#4fa564';
+  cx.beginPath(); cx.arc(x+10,y-12,13,0,7); cx.arc(x+o.w-10,y-12,13,0,7); cx.arc(x+o.w/2,y-o.h+12,15,0,7); cx.rect(x+2,y-14,o.w-4,14); cx.fill();
+  cx.fillStyle='#ff9fb5'; cx.beginPath(); cx.arc(x+o.w/2+5,y-o.h+8,4,0,7); cx.fill();
+  cx.fillStyle='#fff'; cx.beginPath(); cx.arc(x+10,y-18,3,0,7); cx.fill();
+}
+function tower(o){
+  const x=o.x, top=Y(o.h), cols=['#ffe1a8','#ffc4cf','#cfe8ff','#d8f0c6'];
+  const layers=Math.max(2,Math.round(o.h/42)), lh=o.h/layers;
+  for(let i=0;i<layers;i++){
+    const yy=GY-(i+1)*lh;
+    cx.fillStyle=cols[i%4]; rr(x,yy,o.w,lh-2,8); cx.fill();
+    cx.fillStyle='rgba(255,255,255,.55)'; rr(x+5,yy+4,8,lh-12,4); cx.fill();
+  }
+  // 頂端焦糖
+  cx.fillStyle='#b5651d'; rr(x-2,top-6,o.w+4,10,5); cx.fill();
+  cx.fillStyle='#e2463f'; cx.beginPath(); cx.arc(x+o.w/2,top-10,6,0,7); cx.fill();
+}
+function bird(o){
+  const x=o.x+o.w/2, y=Y(o.bot+o.h/2), fl=Math.sin(performance.now()/90+o.ph);
+  cx.fillStyle='#6fb6ff'; cx.beginPath(); cx.ellipse(x,y,20,13,0,0,7); cx.fill();
+  cx.fillStyle='#4d95e0'; cx.beginPath(); cx.moveTo(x-4,y-2); cx.lineTo(x+10,y-2); cx.lineTo(x+2,y-2-14*fl); cx.closePath(); cx.fill();
+  cx.fillStyle='#ffb03b'; cx.beginPath(); cx.moveTo(x-19,y-2); cx.lineTo(x-28,y+1); cx.lineTo(x-19,y+4); cx.fill();
+  cx.fillStyle='#333'; cx.beginPath(); cx.arc(x-10,y-4,2.4,0,7); cx.fill();
+  // 小雲朵（標示「不要跳太高」）
+  cx.fillStyle='rgba(255,255,255,.7)'; cx.beginPath(); cx.arc(x-8,y+16,7,0,7); cx.arc(x+6,y+16,8,0,7); cx.fill();
+}
+function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();}
+function drawChick(){
+  if(inv>0 && Math.floor(inv*10)%2===0) return;
+  const s=chick.squash, w=CHW*(1+s*.5), h=CHH*(1-s*.5);
+  const bx=CHX, by=Y(chick.y);
+  // 影子
+  cx.fillStyle='rgba(60,90,40,.25)'; const sh=Math.max(.3,1-chick.y/400);
+  cx.beginPath(); cx.ellipse(bx,GY+3,18*sh,4*sh,0,0,7); cx.fill();
+  // 腳
+  cx.strokeStyle='#f08a24'; cx.lineWidth=3; cx.lineCap='round';
+  const k=chick.air?0:Math.sin(chick.run)*5;
+  cx.beginPath(); cx.moveTo(bx-6,by-4); cx.lineTo(bx-6+k,by+1); cx.moveTo(bx+6,by-4); cx.lineTo(bx+6-k,by+1); cx.stroke();
+  // 身體
+  cx.fillStyle='#ffe066'; cx.beginPath(); cx.ellipse(bx,by-h/2-2,w/2,h/2,0,0,7); cx.fill();
+  cx.fillStyle='#ffd23f'; cx.beginPath(); cx.ellipse(bx-6,by-h/2+2,10,7,-.4+(chick.air?-.8:0),0,7); cx.fill(); // 翅膀
+  // 頭毛
+  cx.strokeStyle='#f2b705'; cx.lineWidth=2.5; cx.beginPath(); cx.moveTo(bx+2,by-h-1); cx.quadraticCurveTo(bx+6,by-h-10,bx+11,by-h-5); cx.stroke();
+  // 臉
+  const ey=by-h/2-7;
+  if(chick.hitT>0){ cx.strokeStyle='#4a3a2e'; cx.lineWidth=2;
+    for(const ex of [bx+4,bx+14]){cx.beginPath();cx.moveTo(ex-3,ey-3);cx.lineTo(ex+3,ey+3);cx.moveTo(ex+3,ey-3);cx.lineTo(ex-3,ey+3);cx.stroke();}
+  }else{ cx.fillStyle='#3b2c22'; cx.beginPath(); cx.arc(bx+5,ey,2.8,0,7); cx.arc(bx+14,ey,2.8,0,7); cx.fill();
+    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(bx+6,ey-1,1,0,7); cx.arc(bx+15,ey-1,1,0,7); cx.fill(); }
+  cx.fillStyle='#ffa3a3'; cx.globalAlpha=.7; cx.beginPath(); cx.arc(bx+1,ey+6,3.5,0,7); cx.arc(bx+18,ey+6,3.5,0,7); cx.fill(); cx.globalAlpha=1;
+  cx.fillStyle='#ff9a3c'; cx.beginPath();
+  const open=(mode==='mic'&&mic.f)||chick.air; cx.moveTo(bx+8,ey+3); cx.lineTo(bx+12,ey+3); cx.lineTo(bx+10,ey+(open?9:6)); cx.closePath(); cx.fill();
+  if(mode==='mic'&&mic.f&&state==='play'){ // 音符
+    cx.fillStyle='rgba(255,138,101,.9)'; cx.font='bold 18px sans-serif'; cx.fillText('♪',bx+18,by-h-6-Math.sin(performance.now()/150)*4);
+  }
+}
+function drawMeter(){
+  // 左側音高計：對應跳躍高度
+  const x=14, top=Y(HMAX+CHH), bot=Y(HMIN+CHH), w=16;
+  cx.fillStyle='rgba(255,255,255,.75)'; rr(x-4,top-30,w+8,bot-top+60,12); cx.fill();
+  const gr=cx.createLinearGradient(0,top,0,bot); gr.addColorStop(0,'#ff8a65'); gr.addColorStop(.5,'#ffc14d'); gr.addColorStop(1,'#7fd1a0');
+  cx.fillStyle=gr; rr(x,top,w,bot-top,8); cx.fill();
+  cx.fillStyle='#8a7462'; cx.font='bold 12px sans-serif'; cx.textAlign='center';
+  cx.fillText('高',x+w/2,top-12); cx.fillText('低',x+w/2,bot+22);
+  const has=(mode==='mic'?mic.f>0:touchPreviewT>0);
+  if(has){
+    const py=bot-(bot-top)*preview;
+    cx.fillStyle='#fff'; cx.strokeStyle='#e0623d'; cx.lineWidth=3;
+    cx.beginPath(); cx.arc(x+w/2,py,11,0,7); cx.fill(); cx.stroke();
+    if(mode==='mic'){ cx.fillStyle='#4a3a2e'; cx.textAlign='left'; cx.font='bold 13px sans-serif'; cx.fillText(noteName(mic.f),x+w+12,py+4); }
+  }
+  if(mode==='mic'){ // 音量
+    const v=Math.min(1,mic.rms*12);
+    cx.fillStyle='rgba(138,116,98,.25)'; cx.fillRect(x-2,bot+30,w+4,5);
+    cx.fillStyle='#5fb87a'; cx.fillRect(x-2,bot+30,(w+4)*v,5);
+  }
+  cx.textAlign='left';
+}
+function hud(){
+  cx.save(); cx.translate(0,-OY*0.55);
+  cx.textAlign='center'; cx.fillStyle='#4a3a2e'; cx.font='bold 26px sans-serif';
+  cx.fillText(score()+'',LW/2,48);
+  cx.font='13px sans-serif'; cx.fillStyle='#8a7462'; cx.fillText('★ '+starCount,LW/2,68);
+  cx.textAlign='left';
+  for(let i=0;i<3;i++) heart(LW/2-30+i*30,88,i<lives);
+  cx.restore();
+}
+function heart(x,y,on){
+  cx.fillStyle=on?'#ff6b81':'rgba(138,116,98,.3)';
+  cx.beginPath(); cx.moveTo(x,y+6); cx.bezierCurveTo(x-12,y-2,x-6,y-12,x,y-5); cx.bezierCurveTo(x+6,y-12,x+12,y-2,x,y+6); cx.fill();
+}
+
+/* ---------------- 主迴圈 ---------------- */
+function loop(t){
+  const dt=Math.min(0.033,(t-lastT)/1000||0); lastT=t;
+  if(state!=='pause') update(dt);
+  if(state==='menu'||state==='cal'){ dist+=60*dt; chick.run+=dt*4; }
+  if(state==='cal') calTick();
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------------- 校正流程 ---------------- */
+let cal={step:0,samples:[],t:0};
+function openCal(){
+  state='cal'; cal={step:0,samples:[],t:0};
+  $('ovStart').classList.add('hide'); $('ovEnd').classList.add('hide'); $('ovCal').classList.remove('hide');
+  $('calTitle').textContent='先試試你的聲音';
+  $('calMsg').innerHTML='等一下會請你唱一個<b>最低</b>和一個<b>最高</b>的音，<br>這樣啾啾才知道你的音域。<br>不用唱很大聲，舒服就好。';
+  $('bCalGo').style.display=''; $('bCalGo').textContent='開始錄「最低音」';
+}
+function calTick(){
+  $('calVol').style.width=Math.min(100,mic.rms*1200)+'%';
+  $('calNote').textContent=noteName(mic.f);
+  if(cal.step===1||cal.step===2){
+    if(mic.f) cal.samples.push(mic.f);
+    cal.t+=1/60;
+    const left=Math.max(0,3-cal.samples.length/60*1).toFixed(1);
+    $('calSub').textContent=cal.samples.length?('收到聲音了，繼續唱～ 還剩 '+left+' 秒'):'請發出聲音…';
+    if(cal.samples.length>=180){ // 約 3 秒有聲音
+      const s=cal.samples.sort((a,b)=>a-b);
+      if(cal.step===1){ cal.low=s[Math.floor(s.length*.5)];
+        cal.step=2; cal.samples=[];
+        $('calTitle').textContent='好！現在唱「最高音」';
+        $('calMsg').innerHTML='像「咿～～」那樣，拉高一點，<br>撐大約 3 秒。';
+      }else{ cal.high=s[Math.floor(s.length*.5)];
+        let lo=cal.low, hi=cal.high;
+        if(hi/lo<1.4){ const mid=Math.sqrt(lo*hi); lo=mid/1.35; hi=mid*1.35; } // 音域太窄就自動撐開
+        lowHz=lo*1.03; highHz=hi*0.95; store('sj_low',lowHz); store('sj_high',highHz);
+        cal.step=3;
+        $('calTitle').textContent='校正好了！';
+        $('calMsg').innerHTML='你的音域：<b>'+noteName(lowHz)+'</b> 到 <b>'+noteName(highHz)+'</b><br>先隨便唱唱看，看左邊的音高計跟虛線怎麼動。';
+        $('calSub').textContent='準備好就開始吧';
+        $('bCalGo').style.display=''; $('bCalGo').textContent='開始跑！';
+      }
+    }
+  }
+}
+$('bCalGo').onclick=()=>{
+  if(cal.step===0){ cal.step=1; cal.samples=[]; $('bCalGo').style.display='none';
+    $('calTitle').textContent='唱「最低音」'; $('calMsg').innerHTML='像「嗚～～」那樣，低低的，<br>撐大約 3 秒。'; }
+  else if(cal.step===3) startGame();
+};
+$('bCalSkip').onclick=()=>{ if(cal.step===3) {startGame();return;} lowHz=+(store('sj_low')||0)||165; highHz=+(store('sj_high')||0)||560; startGame(); };
+
+/* ---------------- 開始 / 結束 ---------------- */
+function showHint(t){ const h=$('hint'); h.textContent=t; h.style.display=t?'':'none'; }
+function startGame(){
+  reset(); state='play';
+  ['ovStart','ovCal','ovEnd','ovPerm'].forEach(i=>$(i).classList.add('hide'));
+  $('pauseBtn').style.display='flex';
+  showHint(mode==='mic'?'發出聲音就會跳，越高音跳越高':'點畫面：點得越高，跳得越高');
+  setTimeout(()=>{ if(state==='play') showHint(''); },4000);
+}
+function gameOver(){
+  state='over'; $('pauseBtn').style.display='none'; showHint('');
+  const sc=score(), nb=sc>best; if(nb){best=sc; store('sj_best',best);}
+  $('endTitle').textContent=nb?'新紀錄！':'跑完囉！';
+  $('endScore').textContent=sc+' 分';
+  $('endSub').textContent='跑了 '+Math.floor(dist/40)+' 公尺，撿到 '+starCount+' 顆星星'+(nb?'':'（最佳 '+best+'）');
+  $('bRecal').style.display=mode==='mic'?'':'none';
+  $('ovEnd').classList.remove('hide');
+}
+function micBlockedHere(){
+  if(!window.isSecureContext) return 'insecure';
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return 'nomedia';
+  try{ const fp=document.permissionsPolicy||document.featurePolicy; if(fp&&fp.allowsFeature&&!fp.allowsFeature('microphone')) return 'frame'; }catch(e){}
+  return '';
+}
+const PAGE_URL_HINT='如果你是在 Claude 裡面打開這個遊戲，Claude 的預覽視窗不允許網頁使用麥克風，所以這裡沒辦法授權。<br><b>解法：</b>請用手機的 Safari 或 Chrome 直接打開遊戲的網址（https 開頭）再玩，就會跳出麥克風詢問。';
+function permError(html){ const d=$('permErr'); d.innerHTML=html; d.style.display=''; }
+async function showPerm(){
+  $('ovStart').classList.add('hide'); $('ovPerm').classList.remove('hide'); $('permErr').style.display='none';
+  $('bPermAsk').style.display=''; $('bPermAsk').textContent='允許使用麥克風';
+  const why=micBlockedHere();
+  if(why==='frame'){ $('bPermAsk').style.display='none'; permError(PAGE_URL_HINT); return; }
+  if(why==='insecure'){ $('bPermAsk').style.display='none'; permError('這個網址不是 https，瀏覽器不讓網頁開麥克風。請用 https 開頭的網址打開遊戲。'); return; }
+  if(why==='nomedia'){ $('bPermAsk').style.display='none'; permError('這個瀏覽器不支援麥克風。iPhone 請用 Safari，Android 請用 Chrome 打開。'); return; }
+  try{ if(navigator.permissions&&navigator.permissions.query){ const q=await navigator.permissions.query({name:'microphone'});
+    if(q.state==='granted'){ $('bPermAsk').textContent='已經授權過了，開始！'; }
+    else if(q.state==='denied'){ permError(deniedHelp()); } } }catch(e){}
+}
+function deniedHelp(){
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  return '麥克風被拒絕了。要重新打開：<br>'+(ios
+    ?'・Safari：點網址列左邊的「<b>aA</b>」→「網站設定」→「麥克風」改成「允許」，再重新整理頁面。<br>・或到 iPhone「設定」→「Safari」→「麥克風」→ 選「詢問」或「允許」。'
+    :'・Chrome：點網址列左邊的鎖頭/設定圖示 →「權限」→「麥克風」改成「允許」，再重新整理頁面。<br>・或到手機「設定」→「應用程式」→ Chrome →「權限」→ 允許麥克風。');
+}
+$('bMic').onclick=()=>showPerm();
+$('bPermAsk').onclick=async()=>{
+  $('bPermAsk').textContent='等待你按「允許」…'; $('permErr').style.display='none';
+  try{ await startMic(); mode='mic'; $('ovPerm').classList.add('hide'); openCal(); }
+  catch(e){
+    $('bPermAsk').textContent='再試一次';
+    const n=e&&e.name||'';
+    if(n==='NotAllowedError'||n==='SecurityError'){ permError(micBlockedHere()==='frame'?PAGE_URL_HINT:deniedHelp()+'<br><br><span style="opacity:.8">'+PAGE_URL_HINT+'</span>'); }
+    else if(n==='NotFoundError'||n==='OverconstrainedError'){ permError('找不到麥克風。請確認手機的麥克風沒有被其他 App 佔用（例如正在通話或錄音）。'); }
+    else if(n==='NotReadableError'){ permError('麥克風正在被別的 App 使用，請關掉其他用到麥克風的 App 再試一次。'); }
+    else permError('打不開麥克風（'+(n||'未知原因')+'）。<br>'+PAGE_URL_HINT);
+  }
+};
+$('bPermTouch').onclick=()=>{ $('ovPerm').classList.add('hide'); mode='touch'; ensureSfx(); startGame(); };
+$('bPermBack').onclick=()=>{ $('ovPerm').classList.add('hide'); $('ovStart').classList.remove('hide'); };
+$('bTouch').onclick=()=>{ mode='touch'; ensureSfx(); startGame(); };
+$('bAgain').onclick=()=>startGame();
+$('bRecal').onclick=()=>openCal();
+$('bHome').onclick=()=>{ state='menu'; reset(); $('ovEnd').classList.add('hide'); $('ovStart').classList.remove('hide'); bestLine(); };
+function ensureSfx(){ try{ if(!sfxCtx&&!mic.ctx) sfxCtx=new (window.AudioContext||window.webkitAudioContext)(); if(sfxCtx&&sfxCtx.state==='suspended') sfxCtx.resume(); }catch(e){} }
+
+// 暫停
+$('pauseBtn').onclick=e=>{ e.stopPropagation();
+  if(state==='play'){ state='pause'; showHint('暫停中，再按一次繼續'); }
+  else if(state==='pause'){ state='play'; showHint(''); }
+};
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&state==='play'){state='pause';showHint('暫停中，再按右上角繼續');} });
+
+// 手指模式：點的位置越高，跳越高（聲音模式也可以點，當作備用）
+function tapAt(clientY){
+  if(state!=='play') return;
+  const wy=clientY*DPR/SC-OY; // world y
+  const h=GY-wy-CHH; const p=Math.max(0,Math.min(1,(h-HMIN)/(HMAX-HMIN)));
+  preview=p; touchPreviewT=0.6;
+  if(mode==='touch'||true) jump01(p);
+}
+cv.addEventListener('pointerdown',e=>{ e.preventDefault(); tapAt(e.clientY); });
+addEventListener('keydown',e=>{
+  if(state!=='play') return;
+  const m={'1':0,'2':.5,'3':1,'ArrowUp':.6,' ':.35}[e.key];
+  if(m!==undefined){ e.preventDefault(); preview=m; touchPreviewT=.6; jump01(m); }
+});
+
+window.__game={get state(){return state},get mic(){return mic},get chick(){return chick},get obs(){return obs},setRange(l,h){lowHz=l;highHz=h;},start:startGame,get score(){return score()}};
+})();
+</script>
+</body>
+</html>
