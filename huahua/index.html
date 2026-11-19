@@ -95,7 +95,7 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 <!-- HOME -->
 <section id="home" class="scr on">
   <div class="title">畫畫猜猜</div>
-  <p class="sub">🎮 門市版・兩支手機一起玩</p>
+  <p class="sub">🎨 兩支手機一起玩・每題隨機主題</p>
   <div class="card">
     <div class="lbl">你的名字</div>
     <input id="nm" class="inp" maxlength="8" placeholder="例如：小美">
@@ -127,6 +127,8 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
     <p class="note" id="modeNote"></p>
     <div class="lbl">題數</div>
     <div class="seg" id="sRounds"><button data-v="4">4 題</button><button data-v="6">6 題</button><button data-v="10">10 題</button></div>
+    <div class="lbl">題目主題（每題從勾選的主題隨機抽）</div>
+    <div class="seg" id="sCats" style="flex-wrap:wrap"></div>
     <div class="lbl">每題時間</div>
     <div class="seg" id="sTime"><button data-v="60">60 秒</button><button data-v="90">90 秒</button><button data-v="120">120 秒</button></div>
   </div>
@@ -177,12 +179,12 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 
 <!-- overlays -->
 <div class="ov" id="ovPick"><div class="ovc">
-  <div class="note">輪到你畫囉！選一個題目</div>
+  <div class="note">輪到你畫囉！選一個題目</div><div id="pickCat" style="font-size:20px;font-weight:800;margin-top:6px"></div>
   <div id="pickList"></div>
   <div class="note" id="pickT"></div>
 </div></div>
 <div class="ov" id="ovWait"><div class="ovc">
-  <div class="big">🤔</div><h2 id="waitT">對方正在選題目</h2><div class="note dot">準備好猜猜看</div>
+  <div class="big">🤔</div><h2 id="waitT">對方正在選題目</h2><div id="waitCat" style="font-size:20px;font-weight:800;margin:4px 0"></div><div class="note dot">準備好猜猜看</div>
 </div></div>
 <div class="ov" id="ovRes"><div class="ovc">
   <div class="big" id="rIcon">🎉</div>
@@ -212,66 +214,254 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 <script>
 "use strict";
 /* ========== 題庫 ========== */
-const WORDS = `扭蛋機|轉蛋機
-扭蛋|轉蛋|蛋
-搖桿|手把|控制器|遊戲手把
-遊戲卡帶|卡帶|卡匣|遊戲片|卡片
-收銀台|櫃台|櫃檯|結帳台|收銀機|結帳
-遊戲機|主機|掌機
-耳機
-購物袋|提袋|袋子|紙袋
-發票|收據
-價格標籤|標價|價錢|價格牌|標籤
-貨架|架子|展示架|陳列架
-試玩台|試玩機|試玩
-電視|螢幕
-排隊|人龍
-掃描槍|條碼槍|掃條碼
-公仔|模型|玩偶
-集點卡|點數卡|集點
-名牌|識別證|員工證
-鑰匙圈|吊飾
-海報
-紙箱|箱子
-電池
-充電線|傳輸線|充電器
-打卡鐘|打卡
-監視器|攝影機
-抽獎箱|抽獎
-禮物盒|禮物
-便當
-珍珠奶茶|珍奶|奶茶|手搖飲|飲料
-咖啡
-時鐘|時間
-下班
-小偷
-拖把|拖地
-蘑菇|香菇
-星星
-愛心|心
-烏龜
-香蕉
-恐龍
-皇冠
-金幣|硬幣|錢
-寶箱
-氣球
+const BANK_TXT=`#水果|🍎
+蘋果|紅蘋果
+香蕉|芭蕉
+西瓜
+葡萄
+草莓
+鳳梨|菠蘿
+櫻桃
+檸檬
+橘子|柳丁|柑橘|橙子
+桃子|水蜜桃
+梨子|水梨
+芒果
+奇異果|獼猴桃
+椰子
+荔枝
+蓮霧
+哈密瓜|香瓜
+柿子
+酪梨
+火龍果
+#蔬菜|🥕
+紅蘿蔔|胡蘿蔔|蘿蔔
+玉米
+茄子
+番茄|蕃茄|西紅柿
+南瓜
+高麗菜|包心菜|甘藍
+花椰菜|青花菜|綠花椰
+洋蔥
+大蒜|蒜頭|蒜
+辣椒
+香菇|蘑菇
+馬鈴薯|洋芋|土豆
+青椒|甜椒
+小黃瓜|黃瓜
+地瓜|番薯|蕃薯
+蔥|青蔥
+豌豆|豆子|毛豆
+竹筍|筍
+#家具|🛋️
+沙發
+椅子
+桌子|餐桌|書桌
+床
+衣櫃|衣櫥
+檯燈|台燈|燈
+時鐘|鐘|掛鐘
+鏡子
+書架|書櫃
+電視
+電風扇|風扇
+冰箱
+洗衣機
+馬桶
+浴缸
+窗簾
+枕頭
+門
+樓梯
+吊燈
+搖椅
+#情緒|😊
+開心|快樂|高興
+難過|傷心|悲傷
+生氣|憤怒|火大
+害怕|恐懼
+驚訝|嚇一跳|吃驚
+害羞|臉紅
+想睡|睏|愛睏|很睏
+無聊
+緊張
+感動|哭了
+愛|愛心|喜歡
+尷尬
+得意|驕傲
+累|疲倦|好累
+餓|肚子餓|好餓
+興奮
+#動物|🐶
+狗|小狗|狗狗
+貓|小貓|貓咪
+兔子|兔
+烏龜|龜
+大象
+長頸鹿
+企鵝
+獅子
+猴子
+豬|小豬
+魚|小魚
+蛇
+雞|小雞|公雞
+鴨子|鴨
+熊|熊熊
+老虎
+蝴蝶
+蜘蛛
+章魚
+螃蟹
+蝸牛
+鯨魚
+貓頭鷹
+蜜蜂
+刺蝟
+#童話故事|📖
+小紅帽
+三隻小豬
+白雪公主|毒蘋果
+灰姑娘|仙杜瑞拉|玻璃鞋
+睡美人
+美人魚|人魚公主|小美人魚
+傑克與魔豆|魔豆
+醜小鴨
+龜兔賽跑
+小木偶|木偶奇遇記|皮諾丘|長鼻子
+賣火柴的小女孩|火柴
+青蛙王子
+糖果屋|餅乾屋
+國王的新衣|新衣
+桃太郎
+野狼|大野狼
+#天氣|⛅
+晴天|太陽|大太陽
+下雨|雨天|雨
+颱風|台風
+彩虹
+打雷|閃電|雷
+下雪|雪
+多雲|雲|陰天
+颳風|刮風|風
+起霧|霧
+冰雹
+龍捲風
+月亮|晚上
+#成語|📜
+對牛彈琴
+畫蛇添足
+守株待兔
+井底之蛙
+一石二鳥|一箭雙鵰
+亡羊補牢
+狐假虎威
+雞飛狗跳
+如魚得水
+三心二意
+七上八下
+一心一意
+目瞪口呆
+口是心非
+半斤八兩
+九牛一毛
+虎頭蛇尾
+馬到成功
+笑裡藏刀
+火上加油|火上澆油
+雪中送炭
+破鏡重圓
+一刀兩斷
+#食物|🍜
+漢堡
+披薩
+壽司
+拉麵|麵
+冰淇淋|霜淇淋
+蛋糕|生日蛋糕
+荷包蛋|煎蛋|蛋
+飯糰
+珍珠奶茶|珍奶|奶茶
+雞腿|炸雞
+熱狗
+甜甜圈
+棒棒糖|糖果
+包子
+水餃|餃子
+粽子
+薯條
+吐司|麵包
+西瓜汁|果汁
+#生活用品|🪥
+牙刷
 雨傘|傘
-聖誕樹
-雪人
-蛋糕
-鍵盤
-計算機
-剪刀
-膠帶
-信用卡
-鈔票|紙鈔
-門鈴
-購物車|推車
-冷氣|空調
-電梯
+眼鏡
+帽子
 手機
-咖啡杯|馬克杯|杯子`.split('\n').map(l=>{const a=l.trim().split('|');return {w:a[0],al:a};});
+鑰匙
+剪刀
+杯子|馬克杯
+碗
+筷子
+襪子
+鞋子|球鞋
+雨鞋
+吹風機
+梳子
+毛巾
+掃把
+垃圾桶
+衛生紙|面紙
+口罩
+手錶
+#交通工具|🚗
+汽車|車子|車
+公車|巴士
+腳踏車|自行車|單車
+摩托車|機車
+飛機
+火車
+船|輪船
+熱氣球
+直升機|直昇機
+火箭
+救護車
+消防車
+計程車|小黃
+捷運|地鐵
+#運動|⚽
+游泳
+跑步|賽跑
+籃球|打籃球
+足球|踢足球
+棒球|打棒球
+羽毛球|羽球
+桌球|乒乓球
+跳繩
+爬山|登山
+騎腳踏車|騎車
+瑜珈|瑜伽
+溜冰|滑冰
+釣魚
+#職業|👩‍⚕️
+醫生
+護士|護理師
+警察
+消防員
+廚師
+老師
+郵差
+農夫
+畫家
+理髮師
+司機
+太空人
+魔術師`;
+const CATS=[];BANK_TXT.split('\n').forEach(l=>{l=l.trim();if(!l)return;if(l[0]==='#'){const [n,ic]=l.slice(1).split('|');CATS.push({n,ic,words:[]});}
+  else{const al=l.split('|');CATS[CATS.length-1].words.push({w:al[0],al});}});
+const WORDS=[];CATS.forEach(c=>c.words.forEach(x=>WORDS.push(Object.assign({c:c.n},x))));
+const catIcon=n=>(CATS.find(c=>c.n===n)||{}).ic||'';
 
 /* ========== 工具 ========== */
 const $=id=>document.getElementById(id);
@@ -318,7 +508,7 @@ const other=r=>r==='host'?'guest':'host';
 const myName=()=>G?G.names[me.role]:me.name;
 function nameOf(r){return (G&&G.names[r])||(r==='host'?'房主':'朋友');}
 
-function newGame(){return {phase:'lobby',mode:'battle',rounds:6,time:90,names:{host:me.name,guest:null},guestCid:null,
+function newGame(){return {phase:'lobby',mode:'battle',cats:CATS.map(c=>c.n),cat:null,rounds:6,time:90,names:{host:me.name,guest:null},guestCid:null,
   scores:{host:0,guest:0},stars:0,round:0,drawer:'host',choices:[],word:null,al:[],opts:[],optsUsed:false,wrong:[],used:[],last:null,endsAt:0,dur:0};}
 
 function saveSess(){ss.set('hh_sess',me);if(me.role==='host'&&G)ss.set('hh_G',G);}
@@ -348,13 +538,16 @@ function nextRound(){
   G.round++;
   if(G.round>G.rounds){G.phase='end';G.endsAt=0;push();return;}
   G.drawer=G.round%2===1?'host':'guest';
-  let pool=WORDS.filter(x=>!G.used.includes(x.w));if(pool.length<6){G.used=[];pool=WORDS;}
+  const cats=(G.cats&&G.cats.length?G.cats:CATS.map(c=>c.n)).filter(n=>CATS.some(c=>c.n===n));
+  let cands=cats.length>1?cats.filter(n=>n!==G.cat):cats;G.cat=cands[Math.random()*cands.length|0];
+  let pool=WORDS.filter(x=>x.c===G.cat&&!G.used.includes(x.w));
+  if(pool.length<3){G.used=G.used.filter(w=>!WORDS.some(x=>x.w===w&&x.c===G.cat));pool=WORDS.filter(x=>x.c===G.cat);}
   G.choices=shuffle(pool).slice(0,3).map(x=>x.w);
   Object.assign(G,{phase:'pick',word:null,al:[],opts:[],optsUsed:false,wrong:[],last:null,dur:20000,endsAt:Date.now()+20000});
   Draw.reset(G.round);Net.send('clr',{r:G.round});push();
 }
-function pickWord(w){const e=WORDS.find(x=>x.w===w);G.used.push(w);
-  const others=shuffle(WORDS.filter(x=>x.w!==w)).slice(0,3).map(x=>x.w);
+function pickWord(w){const e=WORDS.find(x=>x.w===w&&x.c===G.cat)||WORDS.find(x=>x.w===w);G.used.push(w);
+  const others=shuffle(WORDS.filter(x=>x.w!==w&&x.c===G.cat)).slice(0,3).map(x=>x.w);
   Object.assign(G,{phase:'draw',word:w,al:e.al,opts:shuffle([w,...others]),dur:G.time*1000,endsAt:Date.now()+G.time*1000});push();}
 function endRound(ok){
   const used=Math.round((G.dur-Math.max(0,G.endsAt-Date.now()))/1000);const frac=Math.max(0,1-used/G.time);
@@ -426,6 +619,14 @@ function segInit(id,key,num){$(id).querySelectorAll('button').forEach(b=>b.oncli
 segInit('sMode','mode');segInit('sRounds','rounds',1);segInit('sTime','time',1);
 function segSet(id,v){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==String(v)));$(id).classList.toggle('ro',me.role!=='host');}
 $('bStart').onclick=()=>act('start');
+function catsUI(){const box=$('sCats');const sel=(G&&G.cats)||CATS.map(c=>c.n);const all=sel.length===CATS.length;
+  let h=`<button data-c="__all" class="${all?'on':''}" style="flex:1 0 100%">🎲 全部隨機</button>`;
+  CATS.forEach(c=>{h+=`<button data-c="${c.n}" class="${!all&&sel.includes(c.n)?'on':''}" style="flex:1 0 28%;font-size:15px;padding:10px 4px">${c.ic} ${c.n}</button>`;});
+  if(box.dataset.h!==h){box.dataset.h=h;box.innerHTML=h;box.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(me.role!=='host')return;
+    const n=b.dataset.c;let cur=(G.cats.length===CATS.length)?[]:G.cats.slice();
+    if(n==='__all')cur=CATS.map(c=>c.n);else{cur=cur.includes(n)?cur.filter(x=>x!==n):cur.concat(n);if(!cur.length)cur=CATS.map(c=>c.n);}
+    act('set',{cats:cur});});}
+  box.classList.toggle('ro',me.role!=='host');}
 $('bAgain').onclick=()=>act('again');
 
 /* ========== 畫布 ========== */
@@ -505,7 +706,7 @@ function lobbyUI(){
   $('lCode').textContent=me.code;$('nH').textContent=G?G.names.host:'…';
   const has=G&&G.guestCid;$('pG').classList.toggle('ok',!!has);$('nG').textContent=has?G.names.guest:(me.role==='guest'?me.name:'等待加入');
   $('pG').querySelector('.av').textContent=has?'🕵️':'⏳';$('sG').textContent=has?'已加入':(me.role==='guest'?'連線中…':'還沒來');
-  const mode=G?G.mode:'battle';segSet('sMode',mode);segSet('sRounds',G?G.rounds:6);segSet('sTime',G?G.time:90);
+  const mode=G?G.mode:'battle';segSet('sMode',mode);segSet('sRounds',G?G.rounds:6);segSet('sTime',G?G.time:90);catsUI();
   $('modeNote').textContent=mode==='battle'?'輪流畫、輪流猜。猜得越快分數越高，畫的人被猜中也有分。最後比誰分數高！':'兩個人同一隊！猜得越快拿越多星星 ⭐，一起挑戰默契。';
   $('bStart').style.display=me.role==='host'?'block':'none';$('bStart').disabled=!has;
   $('bShare').style.display=me.role==='host'?'block':'none';
@@ -522,7 +723,7 @@ function gameUI(changed){
   // 題目欄
   const w=$('gWord');
   if(G.phase==='pick')w.innerHTML=`<div class="w">${iDraw?'選題中':'🤔'}</div><div class="h">${iDraw?'':nameOf(G.drawer)+' 正在選題目'}</div>`;
-  else if(G.phase==='draw'&&iDraw)w.innerHTML=`<div class="h">請畫出</div><div class="w">${G.word}</div>`;
+  else if(G.phase==='draw'&&iDraw)w.innerHTML=`<div class="h">${catIcon(G.cat)} ${G.cat||''}・請畫出</div><div class="w">${G.word}</div>`;
   else if(G.phase==='draw')updateHint();
   else if(G.phase==='reveal')w.innerHTML=`<div class="h">答案</div><div class="w">${G.word}</div>`;
   // 選項
@@ -530,15 +731,15 @@ function gameUI(changed){
   const o=$('opts');o.style.display=G.optsUsed?'grid':'none';
   if(G.optsUsed){o.innerHTML='';G.opts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.disabled=G.wrong.includes(t);b.onclick=()=>sendGuess(t);o.appendChild(b);});}
   // 疊層
-  if(G.phase==='pick'&&iDraw){if(changed){const l=$('pickList');l.innerHTML='';G.choices.forEach(c=>{const b=document.createElement('button');b.className='choice';b.textContent=c;b.onclick=()=>{hide('ovPick');act('pick',{w:c});};l.appendChild(b);});}show('ovPick');}else hide('ovPick');
-  if(G.phase==='pick'&&!iDraw){$('waitT').textContent=nameOf(G.drawer)+' 正在選題目';show('ovWait');}else hide('ovWait');
+  if(G.phase==='pick'&&iDraw){if(changed){$('pickCat').textContent='主題：'+catIcon(G.cat)+' '+(G.cat||'');const l=$('pickList');l.innerHTML='';G.choices.forEach(c=>{const b=document.createElement('button');b.className='choice';b.textContent=c;b.onclick=()=>{hide('ovPick');act('pick',{w:c});};l.appendChild(b);});}show('ovPick');}else hide('ovPick');
+  if(G.phase==='pick'&&!iDraw){$('waitT').textContent=nameOf(G.drawer)+' 正在選題目';$('waitCat').textContent='這題主題：'+catIcon(G.cat)+' '+(G.cat||'');show('ovWait');}else hide('ovWait');
   if(G.phase==='reveal'){resUI();show('ovRes');}else hide('ovRes');
   if(changed&&G.phase==='draw'&&!iDraw){$('gi').value='';}
 }
 function updateHint(){
   const n=G.word.length;const el=G.dur?1-Math.max(0,G.endsAt-Date.now())/G.dur:0;
   let s='';for(let i=0;i<n;i++)s+=(el>0.5&&i===0)||(el>0.75&&i===n-1&&n>2)?G.word[i]:'＿';
-  const h=`${n} 個字`+(el>0.5?'・給你一點提示':'');
+  const h=`${catIcon(G.cat)} 主題：${G.cat||'?'}・${n} 個字`+(el>0.5?'・有提示囉':'');
   const w=$('gWord');const k=s+h;if(w.dataset.k!==k){w.dataset.k=k;w.innerHTML=`<div class="w">${s}</div><div class="h">${h}</div>`;}
 }
 function resUI(){const L=G.last;if(!L)return;
