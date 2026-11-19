@@ -191,7 +191,8 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
   <div class="cwrap" id="sWrap"><svg id="sSvg" viewBox="-4 -4 108 108"></svg><div class="feed" id="sFeed"></div></div>
   <div id="soGuess">
     <div class="gbar"><input id="sgi" class="inp" maxlength="14" placeholder="電腦在畫什麼？" enterkeyhint="send" autocomplete="off"><button class="send" id="sSend">猜！</button></div>
-    <button class="optbtn" id="sOptsB">💡 給我四個選項（分數會少一點）</button>
+    <div class="row"><button class="optbtn" id="sHintB">🔤 提示：幾個字</button><button class="optbtn" id="sOptsB">💡 四個選項</button></div>
+    <p class="note" style="text-align:center;margin:4px 0 0">提示只有自己按才會出現，用了分數會少一點</p>
     <div class="opts" id="sOpts" style="display:none"></div>
     <button class="optbtn" id="sSkip">跳過這題</button>
   </div>
@@ -925,12 +926,12 @@ $('bSaveImg').onclick=()=>{const ks=Object.keys(gallery).sort((a,b)=>a-b);const 
 /* ========== 單人模式：電腦畫・我來猜 ========== */
 const SVGNS='http://www.w3.org/2000/svg';
 const toD=s=>{if(s[0]==='o'){const [x,y,r]=s.slice(2).split(' ').map(Number);return `M${x-r} ${y} a${r} ${r} 0 1 0 ${2*r} 0 a${r} ${r} 0 1 0 ${-2*r} 0`;}return s;};
-const Solo={on:false,total:10,limit:45,drawT:24,
+const Solo={on:false,total:10,limit:45,drawT:8,
   start(){this.on=true;this.list=shuffle(PICS).slice(0,this.total);this.i=-1;this.score=0;this.right=0;screen('solo');this.fit();this.next();wake();},
   stop(){this.on=false;},
   fit(){const wrap=$('sWrap');const S=sideFit(wrap,330);wrap.style.width=S+'px';wrap.style.height=S+'px';},
   next(){this.i++;if(this.i>=this.list.length){this.end();return;}
-    const it=this.it=this.list[this.i];this.done=false;this.opt=false;this.wrong=[];this.t0=Date.now();
+    const it=this.it=this.list[this.i];this.done=false;this.opt=false;this.hl=0;$('sHintB').style.display='block';$('sHintB').textContent='🔤 提示：幾個字';this.wrong=[];this.t0=Date.now();
     const others=shuffle(PICS.filter(x=>x.w!==it.w&&x.c===it.c)).concat(shuffle(PICS.filter(x=>x.c!==it.c)));
     this.opts=shuffle([it.w,...others.slice(0,3).map(x=>x.w)]);
     const svg=$('sSvg');svg.innerHTML='';const col=PIC_COL[it.w]||'#2b2b2b';
@@ -945,18 +946,18 @@ const Solo={on:false,total:10,limit:45,drawT:24,
   tick(){if(!$('solo').classList.contains('on')||!this.it||this.done)return;
     const el=(Date.now()-this.t0)/1000;this.drawTo(el/this.drawT);
     const f=Math.max(0,1-el/this.limit);const t=$('soT');t.style.width=(f*100)+'%';t.style.background=f>0.5?'var(--green)':f>0.2?'var(--yel)':'var(--red)';
-    const w=$('soWord');const s=hintText(this.it.w,el/this.limit);const h=`${catIcon(this.it.c)} 主題：${this.it.c}・${this.it.w.length} 個字`;
+    const w=$('soWord');const n=this.it.w.length;const s=this.hl===0?'？':this.hl===1?'＿'.repeat(n):this.it.w[0]+'＿'.repeat(n-1);const h=`${catIcon(this.it.c)} 主題：${this.it.c}`+(this.hl?`・${n} 個字`:'');
     if(w.dataset.k!==s+h){w.dataset.k=s+h;w.innerHTML=`<div class="w">${s}</div><div class="h">${h}</div>`;}
     if(el>=this.limit)this.finish(false);},
   guess(text){text=(text||'').trim();if(!text||this.done)return;
     if(isRight(this.it.al,text)){this.finish(true);return;}
     if(this.opts.includes(text)){this.wrong.push(text);this.showOpts();}
     bubble('sFeed',' me',text);},
-  showOpts(){this.opt=true;$('sOptsB').style.display='none';const o=$('sOpts');o.style.display='grid';o.innerHTML='';
+  showOpts(){this.opt=true;$('sOptsB').style.display='none';$('sHintB').style.display='none';const o=$('sOpts');o.style.display='grid';o.innerHTML='';
     this.opts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.disabled=this.wrong.includes(t);b.onclick=()=>this.guess(t);o.appendChild(b);});},
   finish(ok){if(this.done)return;this.done=true;this.drawTo(1);
     const secs=Math.round((Date.now()-this.t0)/1000);let pts=0;
-    if(ok){pts=Math.max(10,Math.round(100*Math.max(0,1-secs/this.limit)*(this.opt?0.5:1)));this.score+=pts;this.right++;}
+    if(ok){pts=Math.max(10,Math.round(100*Math.max(0,1-secs/this.limit)*(this.opt?0.5:1)*[1,0.85,0.7][this.hl]));this.score+=pts;this.right++;}
     $('soScore').textContent=this.score+' 分';$('soGuess').style.display='none';
     $('soWord').innerHTML=`<div class="h">${catIcon(this.it.c)} ${this.it.c}・答案</div><div class="w">${this.it.w}</div>`;$('soWord').dataset.k='';
     const r=$('soRes');r.style.display='block';
@@ -973,6 +974,7 @@ $('bSolo').onclick=()=>{ls.set('hh_name',$('nm').value.trim());Solo.start();};
 $('sSend').onclick=()=>{Solo.guess($('sgi').value);$('sgi').value='';};
 $('sgi').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sSend').click();}});
 $('sOptsB').onclick=()=>Solo.showOpts();
+$('sHintB').onclick=()=>{if(Solo.done)return;Solo.hl=Math.min(2,Solo.hl+1);$('sHintB').textContent='🔤 提示：第一個字';if(Solo.hl>=2)$('sHintB').style.display='none';};
 $('sSkip').onclick=()=>Solo.finish(false);
 $('bSoQuit').onclick=()=>{if(confirm('要離開單人遊戲嗎？')){Solo.stop();screen('home');}};
 const _leave2=$('bLeave2').onclick;$('bLeave2').onclick=()=>{if(Solo.on){Solo.stop();screen('home');return;}_leave2();};
