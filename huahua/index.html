@@ -89,13 +89,30 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 .toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;font-size:15px;z-index:40;display:none;white-space:nowrap}
 .warn{background:#fff1ee;border:2px solid #ffc9c2;color:#a33;border-radius:14px;padding:8px 12px;font-size:14px;margin:6px 0;display:none}
 </style>
+<style>
+.plist{display:flex;gap:8px;margin:8px 0}
+.plist .pl{padding:10px 2px}
+.plist .pl b{font-size:16px}
+.rcard{background:#fff;border:2px solid var(--line);border-radius:18px;padding:12px 14px;margin-top:10px;text-align:center;animation:pop .3s}
+.rcard h3{margin:2px 0 6px;font-size:22px}
+.rcard .ans{font-size:24px;font-weight:900;color:var(--red);letter-spacing:3px}
+.rcard .who{font-size:16px;margin:6px 0;line-height:1.6}
+.fin{background:#fff8d6;border-color:#ffe08a}
+.okmsg{text-align:center;padding:14px;font-size:18px;color:var(--green);font-weight:800}
+.rank{text-align:left;font-size:19px;line-height:1.9;display:inline-block}
+.solo-btn{background:#7a5cd6;box-shadow:0 4px 0 #5a41a8}
+#sSvg{display:block;width:100%;height:100%}
+#scoreChips{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;font-size:13px;font-weight:800}
+#scoreChips span{background:#fff;border:2px solid var(--line);border-radius:99px;padding:2px 8px}
+#scoreChips span.dr{border-color:var(--red)}
+</style>
 </head>
 <body>
 
 <!-- HOME -->
 <section id="home" class="scr on">
   <div class="title">畫畫猜猜</div>
-  <p class="sub">🎨 兩支手機一起玩・每題隨機主題</p>
+  <p class="sub">🎨 2～3 支手機一起玩・每題隨機主題</p>
   <div class="card">
     <div class="lbl">你的名字</div>
     <input id="nm" class="inp" maxlength="8" placeholder="例如：小美">
@@ -105,8 +122,9 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
     <input id="jc" class="inp" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="4 位數字" style="text-align:center;letter-spacing:8px;font-size:26px">
     <button class="btn blue" id="bJoin">加入房間</button>
   </div>
-  <button class="btn" id="bCreate">建立新房間</button>
-  <p class="note" style="text-align:center">一個人建立房間，把號碼或連結傳給對方，<br>對方輸入號碼就能一起玩。</p>
+  <button class="btn" id="bCreate">建立新房間（2～3 人）</button>
+  <button class="btn solo-btn" id="bSolo">🖍️ 單人：電腦畫・我來猜</button>
+  <p class="note" style="text-align:center">多人：一個人建立房間，把號碼或連結傳給朋友，<br>最多 3 個人一起玩。</p>
 </section>
 
 <!-- LOBBY -->
@@ -115,18 +133,15 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
   <div class="card" style="text-align:center">
     <div class="lbl">房間號碼</div>
     <div class="code" id="lCode">----</div>
-    <button class="btn sec" id="bShare" style="margin-bottom:0">📤 傳邀請給對方</button>
+    <button class="btn sec" id="bShare" style="margin-bottom:0">📤 傳邀請給朋友</button>
   </div>
-  <div class="players">
-    <div class="pl ok" id="pH"><div class="av">🧑‍🎨</div><b id="nH">-</b><span class="note">房主</span></div>
-    <div class="pl" id="pG"><div class="av">⏳</div><b id="nG">等待加入</b><span class="note" id="sG">還沒來</span></div>
-  </div>
+  <div class="plist" id="plist"></div>
   <div class="card">
     <div class="lbl">玩法</div>
     <div class="seg" id="sMode"><button data-v="battle">⚔️ 對戰</button><button data-v="coop">🤝 合作</button></div>
     <p class="note" id="modeNote"></p>
-    <div class="lbl">題數</div>
-    <div class="seg" id="sRounds"><button data-v="4">4 題</button><button data-v="6">6 題</button><button data-v="10">10 題</button></div>
+    <div class="lbl">每個人要畫幾題</div>
+    <div class="seg" id="sPer"><button data-v="1">1 題</button><button data-v="2">2 題</button><button data-v="3">3 題</button></div>
     <div class="lbl">題目主題（每題從勾選的主題隨機抽）</div>
     <div class="seg" id="sCats" style="flex-wrap:wrap"></div>
     <div class="lbl">每題時間</div>
@@ -140,13 +155,14 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 <section id="game" class="scr">
   <div class="top">
     <span class="chip" id="gRound">第 1/6 題</span>
-    <span class="score" id="gScore"></span>
     <span class="chip" id="gConn">🟢</span>
   </div>
-  <div class="warn" id="gWarn">對方好像斷線了，等他回來…（請保持畫面開著）</div>
-  <div class="word" id="gWord"><div class="w">—</div><div class="h"></div></div>
+  <div id="scoreChips"></div>
+  <div class="warn" id="gWarn"></div>
+  <div class="word" id="gWord" style="margin-top:6px"><div class="w">—</div><div class="h"></div></div>
   <div class="tbar"><i id="gT"></i></div>
   <div class="cwrap" id="cwrap"><canvas id="cv"></canvas><div class="feed" id="feed"></div></div>
+  <div class="rcard fin" id="finCard" style="display:none"></div>
   <div id="drawUI">
     <div class="tools" id="cols"></div>
     <div class="tools">
@@ -157,10 +173,29 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
     <button class="optbtn" id="bGive">這題太難，放棄</button>
   </div>
   <div id="guessUI">
-    <div class="gbar"><input id="gi" class="inp" maxlength="14" placeholder="猜猜是什麼？" enterkeyhint="send" autocomplete="off"><button class="send" id="bSend">猜！</button></div>
-    <button class="optbtn" id="bOpts">💡 給我四個選項（分數會少一點）</button>
-    <div class="opts" id="opts" style="display:none"></div>
+    <div id="guessBox">
+      <div class="gbar"><input id="gi" class="inp" maxlength="14" placeholder="猜猜是什麼？" enterkeyhint="send" autocomplete="off"><button class="send" id="bSend">猜！</button></div>
+      <button class="optbtn" id="bOpts">💡 給我四個選項（分數會少一點）</button>
+      <div class="opts" id="opts" style="display:none"></div>
+    </div>
+    <div class="okmsg" id="gotIt" style="display:none">✅ 你猜對了！等其他人猜…</div>
   </div>
+  <div class="rcard" id="resCard" style="display:none"></div>
+</section>
+
+<!-- SOLO -->
+<section id="solo" class="scr">
+  <div class="top"><span class="chip" id="soRound">第 1/10 題</span><span class="score" id="soScore">0 分</span><button class="chip" id="bSoQuit">離開</button></div>
+  <div class="word" id="soWord"><div class="w">—</div><div class="h"></div></div>
+  <div class="tbar"><i id="soT"></i></div>
+  <div class="cwrap" id="sWrap"><svg id="sSvg" viewBox="-4 -4 108 108"></svg><div class="feed" id="sFeed"></div></div>
+  <div id="soGuess">
+    <div class="gbar"><input id="sgi" class="inp" maxlength="14" placeholder="電腦在畫什麼？" enterkeyhint="send" autocomplete="off"><button class="send" id="sSend">猜！</button></div>
+    <button class="optbtn" id="sOptsB">💡 給我四個選項（分數會少一點）</button>
+    <div class="opts" id="sOpts" style="display:none"></div>
+    <button class="optbtn" id="sSkip">跳過這題</button>
+  </div>
+  <div class="rcard" id="soRes" style="display:none"></div>
 </section>
 
 <!-- END -->
@@ -170,9 +205,11 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
     <h2 id="eTitle" style="margin:6px 0">遊戲結束</h2>
     <div id="eBody" style="font-size:18px"></div>
   </div>
-  <div class="lbl" style="margin-top:14px">這局的畫作</div>
-  <div class="gal" id="gal"></div>
-  <button class="btn blue" id="bSaveImg">🖼️ 把畫作存成一張圖</button>
+  <div id="galWrap">
+    <div class="lbl" style="margin-top:14px">這局的畫作</div>
+    <div class="gal" id="gal"></div>
+    <button class="btn blue" id="bSaveImg">🖼️ 把畫作存成一張圖</button>
+  </div>
   <button class="btn" id="bAgain">再玩一次</button>
   <button class="btn sec" id="bLeave2">回首頁</button>
 </section>
@@ -185,13 +222,6 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 </div></div>
 <div class="ov" id="ovWait"><div class="ovc">
   <div class="big">🤔</div><h2 id="waitT">對方正在選題目</h2><div id="waitCat" style="font-size:20px;font-weight:800;margin:4px 0"></div><div class="note dot">準備好猜猜看</div>
-</div></div>
-<div class="ov" id="ovRes"><div class="ovc">
-  <div class="big" id="rIcon">🎉</div>
-  <h2 id="rTitle">答對了！</h2>
-  <div style="font-size:18px">答案是 <b id="rWord" style="font-size:24px;color:var(--red)"></b></div>
-  <div id="rBody" style="margin:10px 0;font-size:17px"></div>
-  <div class="note" id="rNext"></div>
 </div></div>
 <div class="ov" id="ovImg"><div class="ovc" style="max-height:90vh;overflow:auto">
   <div class="note">長按圖片 → 儲存到照片</div>
@@ -415,6 +445,7 @@ const BANK_TXT=`#水果|🍎
 衛生紙|面紙
 口罩
 手錶
+房子|房屋|家
 #交通工具|🚗
 汽車|車子|車
 公車|巴士
@@ -462,20 +493,82 @@ const CATS=[];BANK_TXT.split('\n').forEach(l=>{l=l.trim();if(!l)return;if(l[0]==
   else{const al=l.split('|');CATS[CATS.length-1].words.push({w:al[0],al});}});
 const WORDS=[];CATS.forEach(c=>c.words.forEach(x=>WORDS.push(Object.assign({c:c.n},x))));
 const catIcon=n=>(CATS.find(c=>c.n===n)||{}).ic||'';
+/* 電腦的畫（單人模式） */
+const PICS_TXT=`蘋果;M50 30 C35 18 12 28 15 55 C18 80 35 92 50 85 C65 92 82 80 85 55 C88 28 65 18 50 30 Z;M50 30 Q52 18 56 10;M53 20 Q68 8 76 16 Q64 26 53 20 Z
+香蕉;M20 30 Q30 75 80 75 Q88 72 85 66 Q40 68 30 28 Z;M20 30 L16 22 L23 20 L28 28;M30 40 Q42 62 70 68
+西瓜;M10 40 A40 40 0 0 0 90 40 Z;M18 40 A32 32 0 0 0 82 40;M32 47 l2 5;M40 52 l2 5;M55 55 l-2 5;M48 64 l1 5;M64 48 l-1 5
+葡萄;M48 32 L50 16;M50 22 Q62 12 70 20 Q60 28 50 22;o 40 40 8;o 56 40 8;o 32 54 8;o 48 54 8;o 64 54 8;o 40 68 8;o 56 68 8;o 48 82 8
+草莓;M30 35 Q50 28 70 35 Q78 60 50 90 Q22 60 30 35 Z;M30 35 L38 24 L45 32 L50 20 L55 32 L62 24 L70 35;M42 48 l1 3;M56 48 l1 3;M48 60 l1 3;M40 64 l1 3;M58 64 l1 3;M50 76 l1 3
+櫻桃;o 33 72 12;o 67 72 12;M33 60 Q40 35 55 16;M67 60 Q60 35 55 16;M55 16 Q70 6 80 16 Q66 24 55 16
+鳳梨;M50 40 C72 40 74 60 70 75 C66 92 34 92 30 75 C26 60 28 40 50 40 Z;M35 50 L64 82;M48 44 L70 66;M31 64 L46 86;M65 50 L36 82;M52 44 L30 66;M69 64 L54 86;M40 42 L32 16 L46 32 L50 8 L54 32 L68 16 L60 42
+紅蘿蔔;M34 32 Q50 28 66 32 Q62 60 52 90 Q50 94 48 90 Q38 60 34 32 Z;M40 46 l8 0;M60 56 l-7 0;M44 68 l6 0;M45 30 L36 8;M50 30 L50 4;M55 30 L64 8
+香菇;M14 56 Q14 14 50 14 Q86 14 86 56 Z;M38 56 L35 88 Q50 92 65 88 L62 56;o 34 36 5;o 58 28 6;o 72 44 4;o 48 44 3
+茄子;M70 22 Q90 40 72 68 Q52 94 26 86 Q12 78 24 64 Q40 50 50 34 Q58 18 70 22 Z;M66 22 Q72 10 80 6;M60 26 Q70 18 80 26
+椅子;M30 8 L30 92;M30 8 Q38 6 40 12 L40 56;M30 56 L74 56 L74 62 L30 62;M72 62 L72 92;M40 62 L40 92
+桌子;M8 36 L92 36 L92 46 L8 46 Z;M16 46 L16 90;M84 46 L84 90;M30 46 L30 80;M70 46 L70 80
+床;M10 36 L10 88;M90 54 L90 88;M10 72 L90 72;M10 58 L90 58 L90 72;M14 50 Q14 42 24 42 L36 42 Q44 42 44 50 Q44 56 36 56 L24 56 Q14 56 14 50 Z;M46 58 Q60 50 90 54
+檯燈;M34 12 L66 12 L80 44 L20 44 Z;M50 44 L50 82;M30 90 Q50 76 70 90 Z;M62 44 L62 56
+時鐘;o 50 50 38;o 50 50 3;M50 50 L50 24;M50 50 L68 58;M50 14 l0 6;M86 50 l-6 0;M50 86 l0 -6;M14 50 l6 0
+門;M28 6 L72 6 L72 94 L28 94 Z;M36 16 L64 16 L64 42 L36 42 Z;M36 56 L64 56 L64 84 L36 84 Z;o 66 50 3
+電視;M12 26 L88 26 L88 78 L12 78 Z;M19 33 L81 33 L81 71 L19 71 Z;M42 26 L30 8;M58 26 L70 8;M28 78 L24 90;M72 78 L76 90
+開心;o 50 50 40;M28 40 Q35 30 42 40;M58 40 Q65 30 72 40;M28 58 Q50 86 72 58 Z
+難過;o 50 50 40;M28 34 L42 38;M72 34 L58 38;o 36 46 3;o 64 46 3;M32 74 Q50 58 68 74;M66 52 Q61 61 66 64 Q71 61 66 52 Z
+生氣;o 50 50 40;M28 30 L44 40;M72 30 L56 40;o 37 46 3;o 63 46 3;M34 72 Q50 60 66 72;M80 8 L92 20;M92 8 L80 20
+驚訝;o 50 50 40;M27 26 Q36 18 45 26;M55 26 Q64 18 73 26;o 36 42 6;o 64 42 6;o 50 68 9
+想睡;o 46 54 38;M28 48 Q35 54 42 48;M52 48 Q59 54 66 48;o 47 70 5;M74 6 L88 6 L74 20 L88 20;M88 26 L96 26 L88 34 L96 34
+愛;M50 86 Q10 56 14 32 Q18 12 38 14 Q48 16 50 30 Q52 16 62 14 Q82 12 86 32 Q90 56 50 86 Z
+魚;M14 50 Q45 18 74 50 Q45 82 14 50 Z;M74 50 L92 34 L92 66 Z;o 30 46 3;M42 38 Q49 50 42 62
+貓;o 50 60 30;M26 46 L26 16 L44 32;M74 46 L74 16 L56 32;o 40 56 3;o 60 56 3;M46 65 L54 65 L50 70 Z;M50 70 Q46 76 42 74;M50 70 Q54 76 58 74;M10 64 L34 67;M10 74 L34 71;M90 64 L66 67;M90 74 L66 71
+兔子;o 50 68 24;M40 47 Q28 4 42 6 Q50 10 47 45;M60 47 Q72 4 58 6 Q50 10 53 45;o 42 66 3;o 58 66 3;M48 74 L52 74 L50 77 Z;M50 77 Q46 83 42 81;M50 77 Q54 83 58 81
+烏龜;M18 66 Q20 28 54 28 Q86 28 88 66 Z;M40 44 L56 38 L70 46 L66 60 L44 60 Z;M40 44 L30 36;M70 46 L80 40;M44 60 L36 66;M66 60 L72 66;o 92 56 6;o 94 54 1;M28 66 L26 78 L38 78 L38 66;M68 66 L68 78 L80 78 L78 66;M18 62 L8 68 L20 66
+蛇;M10 82 Q28 60 48 76 Q70 92 80 66 Q88 44 64 46 Q38 48 44 28 Q50 12 70 16;o 75 16 7;o 77 13 1.5;M82 18 L92 16;M82 18 L91 22
+蝸牛;o 56 46 22;M56 46 m-4 0 a4 4 0 1 1 8 0 a8 8 0 1 1 -16 0 a12 12 0 1 1 24 0 a16 16 0 1 1 -32 0;M14 74 Q10 60 22 58 L30 60 Q32 70 40 70 L88 72 Q92 77 86 79 L18 79 Q12 79 14 74 Z;M20 58 L12 40;M26 58 L28 40;o 12 38 2;o 28 38 2
+蝴蝶;M50 24 L50 80;M50 40 Q20 4 10 34 Q8 56 50 50;M50 40 Q80 4 90 34 Q92 56 50 50;M50 52 Q22 58 26 80 Q38 90 50 62;M50 52 Q78 58 74 80 Q62 90 50 62;M50 24 Q44 12 38 8;M50 24 Q56 12 62 8
+蜘蛛;M50 2 L50 30;o 50 37 7;o 50 56 13;M40 50 Q26 34 14 44;M39 55 Q22 50 10 62;M40 60 Q24 66 16 80;M43 66 Q34 80 30 92;M60 50 Q74 34 86 44;M61 55 Q78 50 90 62;M60 60 Q76 66 84 80;M57 66 Q66 80 70 92
+晴天;o 50 50 18;M50 8 L50 22;M50 78 L50 92;M8 50 L22 50;M78 50 L92 50;M20 20 L30 30;M80 20 L70 30;M20 80 L30 70;M80 80 L70 70
+多雲;M20 72 Q6 72 8 58 Q10 46 26 48 Q28 28 46 32 Q58 16 72 30 Q90 28 90 50 Q98 72 80 72 Z
+下雨;M20 52 Q6 52 8 38 Q10 26 26 28 Q28 8 46 12 Q58 -2 72 10 Q90 8 90 30 Q98 52 80 52 Z;M30 62 L26 74;M50 62 L46 74;M70 62 L66 74;M40 80 L36 92;M60 80 L56 92
+彩虹;M8 82 A42 42 0 0 1 92 82;M18 82 A32 32 0 0 1 82 82;M28 82 A22 22 0 0 1 72 82;M2 84 Q4 74 14 76 Q22 72 26 80 Q30 88 20 90 L6 90 Q0 90 2 84 Z;M98 84 Q96 74 86 76 Q78 72 74 80 Q70 88 80 90 L94 90 Q100 90 98 84 Z
+打雷;M20 46 Q6 46 8 32 Q10 20 26 22 Q28 4 46 8 Q58 -4 72 6 Q90 4 90 26 Q98 46 80 46 Z;M54 50 L40 72 L52 72 L44 96 L68 64 L56 64 L64 50 Z
+下雪;M50 8 L50 92;M14 29 L86 71;M14 71 L86 29;M42 16 L50 24 L58 16;M42 84 L50 76 L58 84;M18 40 L28 35 L22 25;M82 60 L72 65 L78 75;M18 60 L28 65 L22 75;M82 40 L72 35 L78 25
+月亮;M58 8 A42 42 0 1 0 90 72 A34 34 0 1 1 58 8 Z;M80 20 l0 8;M76 24 l8 0
+漢堡;M14 44 Q14 16 50 16 Q86 16 86 44 Z;M12 51 Q20 45 28 51 Q36 45 44 51 Q52 45 60 51 Q68 45 76 51 Q84 45 88 51;M14 56 L86 56 Q90 62 86 68 L14 68 Q10 62 14 56 Z;M14 72 L86 72 Q86 86 70 86 L30 86 Q14 86 14 72 Z;M34 30 l4 -2;M50 25 l4 -2;M64 31 l4 -2
+冰淇淋;M30 48 L50 94 L70 48 Z;M36 56 L58 78;M64 56 L44 78;M28 48 Q22 32 36 28 Q38 8 52 10 Q66 10 64 28 Q78 32 72 48 Z
+蛋糕;M18 50 L82 50 L82 86 L18 86 Z;M18 58 Q26 66 34 58 Q42 66 50 58 Q58 66 66 58 Q74 66 82 58;M34 50 L34 34;M50 50 L50 30;M66 50 L66 34;M34 32 Q30 26 34 20 Q38 26 34 32 Z;M50 28 Q46 22 50 16 Q54 22 50 28 Z;M66 32 Q62 26 66 20 Q70 26 66 32 Z
+荷包蛋;M20 50 Q10 24 40 22 Q60 8 78 28 Q96 46 80 68 Q64 90 40 80 Q14 74 20 50 Z;o 50 50 14
+棒棒糖;o 50 34 26;M50 34 m-5 0 a5 5 0 1 1 10 0 a10 10 0 1 1 -20 0 a15 15 0 1 1 30 0 a20 20 0 1 1 -40 0;M50 60 L50 96
+甜甜圈;o 50 50 38;o 50 50 12;M30 30 l5 3;M64 26 l3 5;M74 56 l5 -2;M34 70 l3 5;M58 76 l5 -2;M24 50 l2 5
+雨傘;M8 50 Q8 10 50 10 Q92 10 92 50 Q81 42 71 50 Q60 42 50 50 Q40 42 29 50 Q19 42 8 50 Z;M50 50 L50 84 Q50 94 42 94 Q34 94 34 86;M50 10 L50 4
+眼鏡;o 30 52 16;o 70 52 16;M46 50 Q50 44 54 50;M14 50 L4 40;M86 50 L96 40
+帽子;M30 70 L32 22 L68 22 L70 70;M10 70 L90 70 Q92 80 82 80 L18 80 Q8 80 10 70 Z;M31 58 L69 58
+鑰匙;o 26 50 16;o 26 50 6;M42 50 L92 50;M78 50 L78 62;M88 50 L88 60
+杯子;M20 24 L68 24 L64 88 L24 88 Z;M67 38 Q88 38 86 56 Q84 72 64 70;M36 16 Q32 10 36 4;M50 16 Q46 10 50 4
+襪子;M34 6 L60 6 L60 56 L82 68 Q94 78 84 90 Q76 96 62 88 L40 74 Q32 68 34 58 Z;M34 18 L60 18
+汽車;M6 64 L12 46 L28 42 L38 26 L68 26 L80 42 L94 46 L94 64 Z;M34 42 L42 31 L52 31 L52 42 Z;M58 31 L66 31 L73 42 L58 42 Z;o 28 66 9;o 74 66 9
+船;M8 64 L92 64 L78 82 L22 82 Z;M50 64 L50 8;M52 10 L52 56 L84 56 Z;M48 18 L22 56 L48 56 Z;M4 92 Q14 86 24 92 Q34 98 44 92 Q54 86 64 92 Q74 98 84 92 Q90 88 96 92
+熱氣球;M50 6 Q86 6 82 40 Q78 62 60 70 L40 70 Q22 62 18 40 Q14 6 50 6 Z;M50 6 Q34 40 42 70;M50 6 Q66 40 58 70;M42 70 L40 80;M58 70 L60 80;M38 80 L62 80 L60 94 L40 94 Z
+火箭;M50 4 Q72 26 66 70 L34 70 Q28 26 50 4 Z;o 50 36 8;M34 54 L18 78 L34 72;M66 54 L82 78 L66 72;M40 72 Q44 88 50 96 Q56 88 60 72
+腳踏車;o 22 66 18;o 78 66 18;M22 66 L44 66 L66 38 L36 38 Z;M44 66 L34 28;M28 28 L42 28;M78 66 L64 26 L74 24
+房子;M14 46 L50 12 L86 46;M22 40 L22 90 L78 90 L78 40;M42 90 L42 64 L58 64 L58 90;M28 52 L38 52 L38 62 L28 62 Z;M62 52 L72 52 L72 62 L62 62 Z;M64 28 L64 14 L72 14 L72 36`;
+const PICS=PICS_TXT.split('\n').map(l=>{const a=l.trim().split(';');const e=WORDS.find(x=>x.w===a[0]);return e?{w:a[0],c:e.c,al:e.al,p:a.slice(1)}:null;}).filter(Boolean);
+const PIC_COL={蘋果:'#d93a32',香蕉:'#c99a00',西瓜:'#2f9a52',葡萄:'#7a46c4',草莓:'#d93a32',櫻桃:'#c8283a',鳳梨:'#c98a00',紅蘿蔔:'#e07020',茄子:'#7a46c4',
+  愛:'#e0457a',魚:'#2f7fd0',晴天:'#e09a00',彩虹:'#d24c8f',打雷:'#7a6a00',月亮:'#c98a00',下雪:'#3a8be0',下雨:'#3a7fc0',蝴蝶:'#c0569a',火箭:'#d93a32',熱氣球:'#e07020',汽車:'#2f7fd0',船:'#2f7fd0',棒棒糖:'#e0457a',蛋糕:'#c0569a'};
 
 /* ========== 工具 ========== */
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.add('on'), hide=id=>$(id).classList.remove('on');
-function screen(id){['home','lobby','game','end'].forEach(s=>$(s).classList.toggle('on',s===id));}
+function screen(id){['home','lobby','game','end','solo'].forEach(s=>$(s).classList.toggle('on',s===id));}
 function toast(t,ms=2000){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',ms);}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;};
 const rid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ss={get(k){try{return JSON.parse(sessionStorage.getItem(k));}catch(e){return null;}},set(k,v){try{sessionStorage.setItem(k,JSON.stringify(v));}catch(e){}},del(k){try{sessionStorage.removeItem(k);}catch(e){}}};
 const ls={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 const norm=s=>(s||'').replace(/[\s,，。.!！?？~～、:：;；'"「」『』()（）\-_]/g,'').replace(/臺/g,'台').toLowerCase();
+const isRight=(al,text)=>al.some(x=>{const n=norm(x),g=norm(text);return g===n||(n.length>=2&&g.includes(n));});
 
 /* ========== 連線（公開 MQTT 中繼，同時連三台，訊息去重） ========== */
-const NS='hhcc-dw0118-v1';
+const NS='hhcc-dw0118-v2';
 const qs=new URLSearchParams(location.search);
 const BROKERS=qs.get('brokers')?qs.get('brokers').split(','):['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
 const PAGE=rid();
@@ -494,94 +587,108 @@ const Net={cl:[],seen:new Map(),ctr:0,cid:null,onMsg:null,onUp:null,
       this.cl.push(c);
     });
   },
-  send(t,d){const m=Object.assign({t,f:this.cid,i:this.cid+'.'+PAGE+'.'+(++this.ctr)},d||{});const s=JSON.stringify(m);
+  send(t,d){if(!this.cl.length)return;const m=Object.assign({t,f:this.cid,i:this.cid+'.'+PAGE+'.'+(++this.ctr)},d||{});const s=JSON.stringify(m);
     this.cl.forEach(c=>{if(c.connected)c.publish(this.topic,s,{qos:0});});},
   up(){return this.cl.filter(c=>c.connected).length;},
   close(){this.cl.forEach(c=>{try{c.end(true);}catch(e){}});this.cl=[];}
 };
 
 /* ========== 狀態 ========== */
+const MAXP=3;
 let me={role:null,code:null,name:'',cid:null};
-let G=null;            // 房主為準的遊戲狀態
-let peerSeen=0, helloTimer=null, lastPhaseKey='', gallery={};
-const other=r=>r==='host'?'guest':'host';
-const myName=()=>G?G.names[me.role]:me.name;
-function nameOf(r){return (G&&G.names[r])||(r==='host'?'房主':'朋友');}
+let G=null;            // 以房主為準的遊戲狀態
+let seenAt={}, helloTimer=null, lastPhaseKey='', gallery={};
+const isHost=()=>me.role==='host';
+function pl(id){return G&&G.players.find(p=>p.id===id);}
+function nameOf(id){const p=pl(id);return p?p.name:'朋友';}
+const guessers=()=>G.players.filter(p=>p.id!==G.drawer);
+const iGuessed=()=>G&&G.correct.some(c=>c.id===me.cid);
 
-function newGame(){return {phase:'lobby',mode:'battle',cats:CATS.map(c=>c.n),cat:null,rounds:6,time:90,names:{host:me.name,guest:null},guestCid:null,
-  scores:{host:0,guest:0},stars:0,round:0,drawer:'host',choices:[],word:null,al:[],opts:[],optsUsed:false,wrong:[],used:[],last:null,endsAt:0,dur:0};}
+function newGame(){return {phase:'lobby',mode:'battle',per:2,time:90,cats:CATS.map(c=>c.n),cat:null,players:[{id:me.cid,name:me.name}],hostId:me.cid,
+  scores:{},stars:0,round:0,rounds:0,drawer:null,choices:[],word:null,al:[],opts:[],optUsers:[],wrongs:{},correct:[],used:[],last:null,endsAt:0,dur:0};}
+function saveSess(){ss.set('hh2_sess',me);if(isHost()&&G)ss.set('hh2_G',G);}
 
-function saveSess(){ss.set('hh_sess',me);if(me.role==='host'&&G)ss.set('hh_G',G);}
-
-/* ---- 房主：送出狀態 ---- */
-function push(){if(me.role!=='host')return;const g=Object.assign({},G);const rem=G.endsAt?Math.max(0,G.endsAt-Date.now()):0;delete g.endsAt;
+/* ---- 房主：廣播狀態 ---- */
+function push(){if(!isHost())return;const g=Object.assign({},G);const rem=G.endsAt?Math.max(0,G.endsAt-Date.now()):0;delete g.endsAt;
   Net.send('state',{g,rem});saveSess();render();}
 
-/* ---- 房主：動作處理（自己的動作也走這裡） ---- */
-function act(a,d){d=d||{};if(me.role==='host')hostAct('host',a,d);else Net.send('act',{a,d});}
+/* ---- 動作（房主自己也走這裡） ---- */
+function act(a,d){d=d||{};if(isHost())hostAct(me.cid,a,d);else Net.send('act',{a,d});}
 function hostAct(who,a,d){
-  if(a==='set'&&who==='host'&&G.phase==='lobby'){Object.assign(G,d);push();}
-  else if(a==='start'&&G.phase==='lobby'&&G.guestCid){startGame();}
+  if(!pl(who))return;
+  if(a==='set'&&who===G.hostId&&G.phase==='lobby'){Object.assign(G,d);push();}
+  else if(a==='start'&&G.phase==='lobby'&&G.players.length>=2){startGame();}
   else if(a==='pick'&&G.phase==='pick'&&who===G.drawer&&G.choices.includes(d.w)){pickWord(d.w);}
-  else if(a==='guess'&&G.phase==='draw'&&who!==G.drawer){
-    const ok=G.al.some(x=>{const n=norm(x),g=norm(d.text);return g===n||(n.length>=2&&g.includes(n));});
-    if(!ok&&G.optsUsed&&G.opts.includes(d.text)&&!G.wrong.includes(d.text))G.wrong.push(d.text);
-    Net.send('feed',{who,text:d.text,ok});addBubble(who,d.text,ok);
-    if(ok)endRound(true);else if(G.optsUsed)push();}
-  else if(a==='opts'&&G.phase==='draw'&&who!==G.drawer&&!G.optsUsed){G.optsUsed=true;push();}
-  else if(a==='giveup'&&G.phase==='draw'&&who===G.drawer){endRound(false);}
-  else if(a==='again'&&G.phase==='end'){G.phase='lobby';G.round=0;push();}
+  else if(a==='guess'&&G.phase==='draw'&&who!==G.drawer&&!G.correct.some(c=>c.id===who)){
+    const text=String(d.text||'').slice(0,14);const ok=isRight(G.al,text);
+    if(!ok){if(G.opts.includes(text)){(G.wrongs[who]=G.wrongs[who]||[]).push(text);}
+      Net.send('feed',{who,text,ok:false});addBubble(who,text,false);push();return;}
+    const secs=Math.round((G.dur-Math.max(0,G.endsAt-Date.now()))/1000);const frac=Math.max(0,1-secs/G.time);
+    const usedOpt=G.optUsers.includes(who);let pts=0;
+    if(G.mode==='battle'){pts=Math.max(10,Math.round(100*frac*(usedOpt?0.5:1)));G.scores[who]=(G.scores[who]||0)+pts;
+      const dp=Math.round(50/guessers().length);G.scores[G.drawer]=(G.scores[G.drawer]||0)+dp;}
+    G.correct.push({id:who,secs,pts,opt:usedOpt});
+    Net.send('feed',{who,text:'',ok:true});addBubble(who,'',true);
+    if(G.correct.length>=guessers().length)finishPhase();else push();}
+  else if(a==='opts'&&G.phase==='draw'&&who!==G.drawer&&!G.optUsers.includes(who)){G.optUsers.push(who);push();}
+  else if(a==='giveup'&&G.phase==='draw'&&who===G.drawer){endRound();}
+  else if(a==='again'&&G.phase==='end'&&who===G.hostId){G.phase='lobby';G.round=0;push();}
 }
-function startGame(){Object.assign(G,{scores:{host:0,guest:0},stars:0,round:0,used:[],last:null});
-  gallery={};ss.del('hh_gal');Net.send('newgame',{});nextRound();}
+function startGame(){G.scores={};G.players.forEach(p=>G.scores[p.id]=0);
+  Object.assign(G,{stars:0,round:0,used:[],last:null,rounds:G.per*G.players.length});
+  gallery={};ss.del('hh2_gal');Net.send('newgame',{});nextRound();}
 function nextRound(){
   G.round++;
   if(G.round>G.rounds){G.phase='end';G.endsAt=0;push();return;}
-  G.drawer=G.round%2===1?'host':'guest';
+  G.drawer=G.players[(G.round-1)%G.players.length].id;
   const cats=(G.cats&&G.cats.length?G.cats:CATS.map(c=>c.n)).filter(n=>CATS.some(c=>c.n===n));
-  let cands=cats.length>1?cats.filter(n=>n!==G.cat):cats;G.cat=cands[Math.random()*cands.length|0];
+  const cands=cats.length>1?cats.filter(n=>n!==G.cat):cats;G.cat=cands[Math.random()*cands.length|0];
   let pool=WORDS.filter(x=>x.c===G.cat&&!G.used.includes(x.w));
   if(pool.length<3){G.used=G.used.filter(w=>!WORDS.some(x=>x.w===w&&x.c===G.cat));pool=WORDS.filter(x=>x.c===G.cat);}
   G.choices=shuffle(pool).slice(0,3).map(x=>x.w);
-  Object.assign(G,{phase:'pick',word:null,al:[],opts:[],optsUsed:false,wrong:[],last:null,dur:20000,endsAt:Date.now()+20000});
+  Object.assign(G,{phase:'pick',word:null,al:[],opts:[],optUsers:[],wrongs:{},correct:[],last:null,dur:20000,endsAt:Date.now()+20000});
   Draw.reset(G.round);Net.send('clr',{r:G.round});push();
 }
 function pickWord(w){const e=WORDS.find(x=>x.w===w&&x.c===G.cat)||WORDS.find(x=>x.w===w);G.used.push(w);
   const others=shuffle(WORDS.filter(x=>x.w!==w&&x.c===G.cat)).slice(0,3).map(x=>x.w);
   Object.assign(G,{phase:'draw',word:w,al:e.al,opts:shuffle([w,...others]),dur:G.time*1000,endsAt:Date.now()+G.time*1000});push();}
-function endRound(ok){
-  const used=Math.round((G.dur-Math.max(0,G.endsAt-Date.now()))/1000);const frac=Math.max(0,1-used/G.time);
-  const gs=other(G.drawer);const L={ok,secs:used,drawer:G.drawer,word:G.word};
-  if(G.mode==='battle'){if(ok){L.gp=Math.max(10,Math.round(100*frac*(G.optsUsed?0.5:1)));L.dp=50;G.scores[gs]+=L.gp;G.scores[G.drawer]+=L.dp;}}
-  else{if(ok){let s=used<=G.time*0.3?3:used<=G.time*0.6?2:1;if(G.optsUsed)s=Math.max(1,s-1);L.st=s;G.stars+=s;}else L.st=0;}
-  Object.assign(G,{phase:'reveal',last:L,dur:7000,endsAt:Date.now()+7000});push();
+function finishPhase(){Object.assign(G,{phase:'finish',dur:5000,endsAt:Date.now()+5000});push();}
+function endRound(){
+  const ok=G.correct.length>0;const L={ok,word:G.word,drawer:G.drawer,correct:G.correct.slice(),all:ok&&G.correct.length>=guessers().length};
+  if(G.mode==='coop'){let s=0;if(ok){const t=G.correct[0].secs;s=t<=G.time*0.3?3:t<=G.time*0.6?2:1;if(G.correct[0].opt)s=Math.max(1,s-1);}L.st=s;G.stars+=s;}
+  Object.assign(G,{phase:'reveal',last:L,dur:8000,endsAt:Date.now()+8000});push();
 }
 setInterval(()=>{
-  if(me.role==='host'&&G&&G.endsAt&&Date.now()>=G.endsAt){
-    if(G.phase==='pick')pickWord(G.choices[0]);else if(G.phase==='draw')endRound(false);else if(G.phase==='reveal')nextRound();}
+  if(isHost()&&G&&G.endsAt&&Date.now()>=G.endsAt){
+    if(G.phase==='pick')pickWord(G.choices[0]);else if(G.phase==='draw')(G.correct.length?finishPhase:endRound)();
+    else if(G.phase==='finish')endRound();else if(G.phase==='reveal')nextRound();}
   tickUI();
 },250);
 setInterval(()=>{if(me.role)Net.send('ping',{});peerUI();},4000);
 
 /* ---- 收訊息 ---- */
 function onMsg(m){
-  peerSeen=Date.now();peerUI();
-  if(me.role==='host'){
+  seenAt[m.f]=Date.now();
+  if(isHost()){
     if(m.t==='hello'){
-      const stale=!G.guestCid||G.guestCid===m.f||(Date.now()-(G._gseen||0)>20000);
-      if(stale){if(G.guestCid!==m.f&&G.guestCid)toast(m.name+' 重新加入了');else if(!G.guestCid)toast(m.name+' 加入了！');
-        G.guestCid=m.f;G.names.guest=m.name;G._gseen=Date.now();push();sendStrokes();}
+      const ex=pl(m.f);
+      if(ex){ex.name=m.name;push();sendStrokes();return;}
+      if(G.players.length<MAXP){G.players.push({id:m.f,name:m.name});if(G.phase!=='lobby')G.scores[m.f]=G.scores[m.f]||0;toast(m.name+' 加入了！');push();sendStrokes();return;}
+      // 房間滿了：如果有人斷線很久，讓新的人接手他的位置（例如換了手機）
+      const stale=G.players.find(p=>p.id!==G.hostId&&Date.now()-(seenAt[p.id]||0)>25000);
+      if(stale){const old=stale.id;stale.id=m.f;stale.name=m.name;if(G.scores[old]!=null){G.scores[m.f]=G.scores[old];delete G.scores[old];}
+        if(G.drawer===old)G.drawer=m.f;G.correct.forEach(c=>{if(c.id===old)c.id=m.f;});toast(m.name+' 加入了！');push();sendStrokes();}
       else Net.send('full',{to:m.f});
       return;}
-    if(m.f!==G.guestCid)return;G._gseen=Date.now();
-    if(m.t==='act')hostAct('guest',m.a,m.d);
+    if(!pl(m.f))return;
+    if(m.t==='act')hostAct(m.f,m.a,m.d);
     else if(m.t==='sync'){push();sendStrokes();}
   }else{
-    if(m.t==='state'){if(m.g.guestCid&&m.g.guestCid!==me.cid){if(!G){toast('這個房間已經有人了',3500);}return;}
-      if(!m.g.guestCid)return;
+    if(m.t==='state'){
+      if(!m.g.players.some(p=>p.id===me.cid)){if(G){toast('你已經不在這個房間了',3500);leave();}return;}
       stopHello();G=m.g;G.endsAt=m.rem?Date.now()+m.rem:0;saveSess();render();return;}
-    if(m.t==='full'&&m.to===me.cid){stopHello();toast('這個房間已經有兩個人了',3500);leave();return;}
-    if(m.t==='newgame'){gallery={};ss.del('hh_gal');}
+    if(m.t==='full'&&m.to===me.cid&&!G){stopHello();toast('這個房間已經滿 3 個人了',3500);leave();return;}
+    if(m.t==='newgame'){gallery={};ss.del('hh2_gal');}
   }
   if(m.t==='st'){Draw.recv(m);}
   else if(m.t==='undo'){Draw.remove(m.k);}
@@ -592,8 +699,7 @@ function onMsg(m){
 }
 function sendStrokes(){if(G)Net.send('strokes',{r:G.round,list:Draw.strokes});}
 Net.onMsg=onMsg;
-Net.onUp=()=>{if(me.role==='guest'){if(G)Net.send('sync',{});else startHello();}else if(me.role==='host'&&G)push();};
-
+Net.onUp=()=>{if(me.role==='guest'){if(G)Net.send('sync',{});else startHello();}else if(isHost()&&G)push();};
 function startHello(){stopHello();const f=()=>Net.send('hello',{name:me.name});f();helloTimer=setInterval(f,1500);}
 function stopHello(){clearInterval(helloTimer);helloTimer=null;}
 
@@ -603,36 +709,53 @@ $('bCreate').onclick=()=>{me={role:'host',code:String(1000+Math.floor(Math.rando
   Net.cid=me.cid;G=newGame();Net.connect(me.code);saveSess();render();};
 $('bJoin').onclick=()=>{const c=$('jc').value.replace(/\D/g,'');if(c.length!==4){toast('請輸入 4 位數房間號碼');return;}
   me={role:'guest',code:c,name:getName(),cid:rid()};Net.cid=me.cid;G=null;Net.connect(c);saveSess();render();};
-function leave(){Net.close();stopHello();me={role:null};G=null;ss.del('hh_sess');ss.del('hh_G');ss.del('hh_gal');gallery={};
-  history.replaceState(null,'',location.pathname+(qs.get('brokers')?'?brokers='+qs.get('brokers'):''));screen('home');['ovPick','ovWait','ovRes'].forEach(hide);}
+function leave(){Net.close();stopHello();me={role:null};G=null;ss.del('hh2_sess');ss.del('hh2_G');ss.del('hh2_gal');gallery={};
+  history.replaceState(null,'',location.pathname+(qs.get('brokers')?'?brokers='+qs.get('brokers'):''));Solo.stop();screen('home');['ovPick','ovWait'].forEach(hide);}
 $('bLeave1').onclick=()=>{if(confirm('確定要離開房間嗎？'))leave();};
 $('bLeave2').onclick=leave;
 $('bShare').onclick=async()=>{
   const u=new URL(location.href);u.search='';u.searchParams.set('room',me.code);if(qs.get('brokers'))u.searchParams.set('brokers',qs.get('brokers'));
   const text='來玩畫畫猜猜！房間號碼：'+me.code;
   if(navigator.share){try{await navigator.share({title:'畫畫猜猜',text,url:u.href});return;}catch(e){if(e.name==='AbortError')return;}}
-  try{await navigator.clipboard.writeText(text+'\n'+u.href);toast('已複製邀請連結，貼給對方就可以了');}catch(e){prompt('複製這段傳給對方：',text+' '+u.href);}
+  try{await navigator.clipboard.writeText(text+'\n'+u.href);toast('已複製邀請連結，貼給朋友就可以了');}catch(e){prompt('複製這段傳給朋友：',text+' '+u.href);}
 };
 
-/* ========== 大廳 UI ========== */
-function segInit(id,key,num){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{if(me.role!=='host')return;act('set',{[key]:num?+b.dataset.v:b.dataset.v});});}
-segInit('sMode','mode');segInit('sRounds','rounds',1);segInit('sTime','time',1);
-function segSet(id,v){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==String(v)));$(id).classList.toggle('ro',me.role!=='host');}
+/* ========== 大廳 ========== */
+function segInit(id,key,num){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{if(!isHost())return;act('set',{[key]:num?+b.dataset.v:b.dataset.v});});}
+segInit('sMode','mode');segInit('sPer','per',1);segInit('sTime','time',1);
+function segSet(id,v){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==String(v)));$(id).classList.toggle('ro',!isHost());}
 $('bStart').onclick=()=>act('start');
+$('bAgain').onclick=()=>{if(Solo.on){Solo.start();return;}act('again');};
 function catsUI(){const box=$('sCats');const sel=(G&&G.cats)||CATS.map(c=>c.n);const all=sel.length===CATS.length;
   let h=`<button data-c="__all" class="${all?'on':''}" style="flex:1 0 100%">🎲 全部隨機</button>`;
   CATS.forEach(c=>{h+=`<button data-c="${c.n}" class="${!all&&sel.includes(c.n)?'on':''}" style="flex:1 0 28%;font-size:15px;padding:10px 4px">${c.ic} ${c.n}</button>`;});
-  if(box.dataset.h!==h){box.dataset.h=h;box.innerHTML=h;box.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(me.role!=='host')return;
+  if(box.dataset.h!==h){box.dataset.h=h;box.innerHTML=h;box.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(!isHost())return;
     const n=b.dataset.c;let cur=(G.cats.length===CATS.length)?[]:G.cats.slice();
     if(n==='__all')cur=CATS.map(c=>c.n);else{cur=cur.includes(n)?cur.filter(x=>x!==n):cur.concat(n);if(!cur.length)cur=CATS.map(c=>c.n);}
     act('set',{cats:cur});});}
-  box.classList.toggle('ro',me.role!=='host');}
-$('bAgain').onclick=()=>act('again');
+  box.classList.toggle('ro',!isHost());}
+const AV=['🧑‍🎨','🕵️','🦊'];
+function lobbyUI(){
+  $('lCode').textContent=me.code;
+  const ps=G?G.players:[];let h='';
+  for(let i=0;i<MAXP;i++){const p=ps[i];
+    if(p)h+=`<div class="pl ok"><div class="av">${AV[i]}</div><b>${esc(p.name)}${p.id===me.cid?'（我）':''}</b><span class="note">${i===0?'房主':'已加入'}</span></div>`;
+    else h+=`<div class="pl"><div class="av">⏳</div><b>${!G&&i===1?esc(me.name):'等待加入'}</b><span class="note">${i===2?'可不用等':'還沒來'}</span></div>`;}
+  $('plist').innerHTML=h;
+  segSet('sMode',G?G.mode:'battle');segSet('sPer',G?G.per:2);segSet('sTime',G?G.time:90);catsUI();
+  const mode=G?G.mode:'battle';
+  $('modeNote').textContent=mode==='battle'?'輪流畫、其他人搶答。猜得越快分數越高，畫的人被猜中也有分。最後比誰分數高！':'大家同一隊！越快有人猜中，拿越多星星 ⭐，一起挑戰默契。';
+  const n=ps.length;
+  $('bStart').style.display=isHost()?'block':'none';$('bStart').disabled=n<2;
+  $('bShare').style.display=isHost()?'block':'none';
+  $('lHint').textContent=isHost()?(n>=3?'3 個人都到齊了，按開始吧！':n===2?'可以開始了，或等第 3 個人加入':'把房間號碼傳給朋友，等他們加入'):(G?'等房主按開始…':'正在找房間…（請確認號碼正確）');
+  connUI();
+}
 
 /* ========== 畫布 ========== */
 const cv=$('cv'),ctx=cv.getContext('2d');
 const COLORS=['#2b2b2b','#E8453C','#ff9f1c','#ffd23f','#3fae6a','#3a8be0','#9b5de5','#f78fb3','#8d5a3b'];
-const Draw={strokes:[],round:-1,color:COLORS[0],size:0.010,eraser:false,cur:null,buf:[],
+const Draw={strokes:[],round:-1,color:COLORS[0],size:0.010,eraser:false,cur:null,sentTo:0,
   reset(r){this.strokes=[];this.round=r;this.redraw();},
   clearAll(){this.strokes=[];this.redraw();},
   load(list){this.strokes=list||[];this.redraw();},
@@ -645,16 +768,15 @@ const Draw={strokes:[],round:-1,color:COLORS[0],size:0.010,eraser:false,cur:null
     ctx.beginPath();const st=Math.max(0,from-2);ctx.moveTo(p[st]*W,p[st+1]*W);for(let i=st+2;i<p.length;i+=2)ctx.lineTo(p[i]*W,p[i+1]*W);ctx.stroke();},
   redraw(){ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);this.strokes.forEach(s=>this.seg(s,0));}
 };
-function fitCanvas(){
-  const wrap=$('cwrap');const avail=window.innerHeight-(me.role&&G&&G.drawer===me.role?330:300);
-  const S=Math.max(220,Math.min((wrap.parentElement.clientWidth||372)-32,avail));
+function sideFit(wrap,reserve){const avail=window.innerHeight-reserve;
+  return Math.max(220,Math.min((wrap.parentElement.clientWidth||372)-32,avail));}
+function fitCanvas(){const wrap=$('cwrap');const S=sideFit(wrap,G&&G.drawer===me.cid?340:320);
   wrap.style.width=S+'px';wrap.style.height=S+'px';const d=Math.min(2,window.devicePixelRatio||1);
-  if(cv.width!==Math.round(S*d)){cv.width=cv.height=Math.round(S*d);Draw.redraw();}
-}
-window.addEventListener('resize',()=>{if($('game').classList.contains('on'))fitCanvas();});
-const canDraw=()=>G&&G.phase==='draw'&&G.drawer===me.role;
+  if(cv.width!==Math.round(S*d)){cv.width=cv.height=Math.round(S*d);Draw.redraw();}}
+window.addEventListener('resize',()=>{if($('game').classList.contains('on'))fitCanvas();if($('solo').classList.contains('on'))Solo.fit();});
+const canDraw=()=>G&&(G.phase==='draw'||G.phase==='finish')&&G.drawer===me.cid;
 function pt(e){const r=cv.getBoundingClientRect();return [Math.round((e.clientX-r.left)/r.width*1000)/1000,Math.round((e.clientY-r.top)/r.height*1000)/1000];}
-cv.addEventListener('pointerdown',e=>{if(!canDraw())return;e.preventDefault();cv.setPointerCapture(e.pointerId);
+cv.addEventListener('pointerdown',e=>{if(!canDraw())return;e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(_){}
   const s={k:me.cid+'_'+PAGE+(++Net.ctr),c:Draw.eraser?'#ffffff':Draw.color,w:Draw.eraser?0.06:Draw.size,p:pt(e)};
   Draw.strokes.push(s);Draw.cur=s;Draw.sentTo=0;Draw.seg(s,0);flush();});
 cv.addEventListener('pointermove',e=>{const s=Draw.cur;if(!s)return;e.preventDefault();
@@ -666,125 +788,132 @@ cv.addEventListener('pointerup',endStroke);cv.addEventListener('pointercancel',e
 function flush(){const s=Draw.cur;if(!s||Draw.sentTo>=s.p.length)return;
   Net.send('st',{r:G.round,k:s.k,c:s.c,w:s.w,p:s.p.slice(Draw.sentTo)});Draw.sentTo=s.p.length;}
 setInterval(flush,70);
-// 工具列
 COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='col'+(i?'':' on');b.style.background=c;
   b.onclick=()=>{Draw.color=c;Draw.eraser=false;$('tEr').classList.remove('on');document.querySelectorAll('.col').forEach(x=>x.classList.toggle('on',x===b));};$('cols').appendChild(b);});
 document.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{Draw.size=+b.dataset.sz;document.querySelectorAll('[data-sz]').forEach(x=>x.classList.toggle('on',x===b));});
 $('tEr').onclick=()=>{Draw.eraser=!Draw.eraser;$('tEr').classList.toggle('on',Draw.eraser);};
 $('tUn').onclick=()=>{if(!canDraw())return;const mine=Draw.strokes.filter(s=>s.k.startsWith(me.cid));const s=mine[mine.length-1];if(!s)return;Draw.remove(s.k);Net.send('undo',{k:s.k});};
-$('tCl').onclick=()=>{if(!canDraw())return;Draw.clearAll();Net.send('clr',{r:G.round});};
+$('tCl').onclick=()=>{if(!canDraw())return;if(!confirm('要把整張畫清空嗎？'))return;Draw.clearAll();Net.send('clr',{r:G.round});};
 $('bGive').onclick=()=>{if(confirm('要放棄這題嗎？'))act('giveup');};
 ['很接近了！','不是喔','再想想','想大一點','你超厲害','加油 💪'].forEach(t=>{const b=document.createElement('button');b.textContent=t;
-  b.onclick=()=>{if(!canDraw())return;Net.send('react',{text:t});addBubble('rxme',t);};$('rxs').appendChild(b);});
+  b.onclick=()=>{if(!canDraw()||G.phase!=='draw')return;Net.send('react',{text:t});addBubble('rxme',t);};$('rxs').appendChild(b);});
 
 /* ========== 猜題 ========== */
-function sendGuess(text){text=(text||'').trim();if(!text||!G||G.phase!=='draw'||G.drawer===me.role)return;act('guess',{text});}
+function sendGuess(text){text=(text||'').trim();if(!text||!G||G.phase!=='draw'||G.drawer===me.cid||iGuessed())return;act('guess',{text});}
 $('bSend').onclick=()=>{sendGuess($('gi').value);$('gi').value='';};
 $('gi').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('bSend').click();}});
 $('bOpts').onclick=()=>act('opts');
-function addBubble(who,text,ok){const f=$('feed');const b=document.createElement('div');
-  const rx=who==='rx'||who==='rxme';
-  b.className='bub'+(rx?' rx':'')+(who===me.role||who==='rxme'?' me':'')+(ok?' ok':'');
-  b.textContent=ok?'✅ '+nameOf(who)+' 猜對了！':who==='rx'?nameOf(G?G.drawer:'host')+'：'+text:(who===me.role||who==='rxme'?'':nameOf(who)+'：')+text;
+function bubble(feed,cls,text){const f=$(feed);const b=document.createElement('div');b.className='bub'+cls;b.textContent=text;
   f.appendChild(b);while(f.children.length>4)f.firstChild.remove();
   setTimeout(()=>{b.style.transition='opacity .6s';b.style.opacity='0';setTimeout(()=>b.remove(),700);},5000);}
+function addBubble(who,text,ok){
+  if(who==='rx')return bubble('feed',' rx',nameOf(G?G.drawer:'')+'：'+text);
+  if(who==='rxme')return bubble('feed',' rx me',text);
+  if(ok)return bubble('feed',' ok'+(who===me.cid?' me':''),'✅ '+(who===me.cid?'你':nameOf(who))+' 猜對了！');
+  bubble('feed',who===me.cid?' me':'',(who===me.cid?'':nameOf(who)+'：')+text);}
 
 /* ========== 畫面 ========== */
 function render(){
+  if(Solo.on)return;
   if(!me.role){screen('home');return;}
   if(!G){screen('lobby');lobbyUI();return;}
   const key=G.phase+G.round;
-  if(G.phase==='lobby'){screen('lobby');lobbyUI();['ovPick','ovWait','ovRes'].forEach(hide);}
-  else if(G.phase==='end'){screen('end');endUI();['ovPick','ovWait','ovRes'].forEach(hide);}
+  if(G.phase==='lobby'){screen('lobby');lobbyUI();['ovPick','ovWait'].forEach(hide);}
+  else if(G.phase==='end'){screen('end');endUI();['ovPick','ovWait'].forEach(hide);}
   else{screen('game');gameUI(key!==lastPhaseKey);}
-  if(G.round!==Draw.round&&G.phase!=='end')Draw.reset(G.round);
+  if(G.round!==Draw.round&&G.phase!=='end'&&G.phase!=='lobby')Draw.reset(G.round);
   if(G.phase==='reveal'&&lastPhaseKey!==key)snap();
-  if(key!==lastPhaseKey&&G.phase==='draw'&&me.role==='guest'&&Draw.strokes.length===0)Net.send('sync',{});
+  if(key!==lastPhaseKey&&G.phase==='draw'&&!isHost()&&Draw.strokes.length===0)Net.send('sync',{});
   lastPhaseKey=key;wake();
 }
-function lobbyUI(){
-  $('lCode').textContent=me.code;$('nH').textContent=G?G.names.host:'…';
-  const has=G&&G.guestCid;$('pG').classList.toggle('ok',!!has);$('nG').textContent=has?G.names.guest:(me.role==='guest'?me.name:'等待加入');
-  $('pG').querySelector('.av').textContent=has?'🕵️':'⏳';$('sG').textContent=has?'已加入':(me.role==='guest'?'連線中…':'還沒來');
-  const mode=G?G.mode:'battle';segSet('sMode',mode);segSet('sRounds',G?G.rounds:6);segSet('sTime',G?G.time:90);catsUI();
-  $('modeNote').textContent=mode==='battle'?'輪流畫、輪流猜。猜得越快分數越高，畫的人被猜中也有分。最後比誰分數高！':'兩個人同一隊！猜得越快拿越多星星 ⭐，一起挑戰默契。';
-  $('bStart').style.display=me.role==='host'?'block':'none';$('bStart').disabled=!has;
-  $('bShare').style.display=me.role==='host'?'block':'none';
-  $('lHint').textContent=me.role==='host'?(has?'人都到齊了，按開始吧！':'把房間號碼傳給對方，等他加入'):(has?'等房主按開始…':'正在找房間…（請確認號碼正確）');
-  connUI();
-}
-function scoreText(){return G.mode==='battle'?`${G.names.host} ${G.scores.host} : ${G.scores.guest} ${G.names.guest}`:`⭐ ${G.stars}`;}
+function chipsUI(){const c=$('scoreChips');
+  if(G.mode==='coop'){c.innerHTML=`<span>🤝 合作 ⭐ ${G.stars}</span>`;return;}
+  c.innerHTML=G.players.map(p=>`<span class="${p.id===G.drawer?'dr':''}">${p.id===G.drawer?'✏️':''}${esc(p.name)} ${G.scores[p.id]||0}</span>`).join('');}
 function gameUI(changed){
-  fitCanvas();
-  const iDraw=G.drawer===me.role;
-  $('gRound').textContent=`第 ${G.round}/${G.rounds} 題`;$('gScore').textContent=scoreText();
-  $('drawUI').style.display=iDraw&&G.phase==='draw'?'block':'none';
-  $('guessUI').style.display=!iDraw&&G.phase==='draw'?'block':'none';
-  // 題目欄
-  const w=$('gWord');
-  if(G.phase==='pick')w.innerHTML=`<div class="w">${iDraw?'選題中':'🤔'}</div><div class="h">${iDraw?'':nameOf(G.drawer)+' 正在選題目'}</div>`;
-  else if(G.phase==='draw'&&iDraw)w.innerHTML=`<div class="h">${catIcon(G.cat)} ${G.cat||''}・請畫出</div><div class="w">${G.word}</div>`;
-  else if(G.phase==='draw')updateHint();
-  else if(G.phase==='reveal')w.innerHTML=`<div class="h">答案</div><div class="w">${G.word}</div>`;
-  // 選項
-  $('bOpts').style.display=G.optsUsed?'none':'block';
-  const o=$('opts');o.style.display=G.optsUsed?'grid':'none';
-  if(G.optsUsed){o.innerHTML='';G.opts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.disabled=G.wrong.includes(t);b.onclick=()=>sendGuess(t);o.appendChild(b);});}
-  // 疊層
-  if(G.phase==='pick'&&iDraw){if(changed){$('pickCat').textContent='主題：'+catIcon(G.cat)+' '+(G.cat||'');const l=$('pickList');l.innerHTML='';G.choices.forEach(c=>{const b=document.createElement('button');b.className='choice';b.textContent=c;b.onclick=()=>{hide('ovPick');act('pick',{w:c});};l.appendChild(b);});}show('ovPick');}else hide('ovPick');
-  if(G.phase==='pick'&&!iDraw){$('waitT').textContent=nameOf(G.drawer)+' 正在選題目';$('waitCat').textContent='這題主題：'+catIcon(G.cat)+' '+(G.cat||'');show('ovWait');}else hide('ovWait');
-  if(G.phase==='reveal'){resUI();show('ovRes');}else hide('ovRes');
-  if(changed&&G.phase==='draw'&&!iDraw){$('gi').value='';}
+  fitCanvas();chipsUI();
+  const iDraw=G.drawer===me.cid,ph=G.phase;
+  $('gRound').textContent=`第 ${G.round}/${G.rounds} 題・${nameOf(G.drawer)} 畫`;
+  $('drawUI').style.display=iDraw&&(ph==='draw'||ph==='finish')?'block':'none';
+  $('bGive').style.display=ph==='draw'?'block':'none';$('rxs').style.display=ph==='draw'?'flex':'none';
+  $('guessUI').style.display=!iDraw&&ph==='draw'?'block':'none';
+  $('guessBox').style.display=iGuessed()?'none':'block';$('gotIt').style.display=iGuessed()?'block':'none';
+  const w=$('gWord');w.dataset.k='';
+  if(ph==='pick')w.innerHTML=`<div class="w">${iDraw?'選題中':'🤔'}</div><div class="h">${iDraw?'':esc(nameOf(G.drawer))+' 正在選題目'}</div>`;
+  else if(ph==='draw'&&(iDraw||iGuessed()))w.innerHTML=`<div class="h">${catIcon(G.cat)} ${G.cat||''}・${iDraw?'請畫出':'答案'}</div><div class="w">${esc(G.word)}</div>`;
+  else if(ph==='draw')updateHint();
+  else w.innerHTML=`<div class="h">${catIcon(G.cat)} ${G.cat||''}・答案</div><div class="w">${esc(G.word)}</div>`;
+  const myOpt=G.optUsers.includes(me.cid);
+  $('bOpts').style.display=myOpt?'none':'block';
+  const o=$('opts');o.style.display=myOpt?'grid':'none';
+  if(myOpt){const wr=G.wrongs[me.cid]||[];o.innerHTML='';G.opts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.disabled=wr.includes(t);b.onclick=()=>sendGuess(t);o.appendChild(b);});}
+  // 猜中後的 5 秒
+  const fc=$('finCard');
+  if(ph==='finish'){fc.style.display='block';
+    const names=G.correct.map(c=>c.id===me.cid?'你':nameOf(c.id)).join('、');
+    fc.innerHTML=iDraw?`<h3>🎉 ${esc(names)} 猜對了！</h3><div class="who">還有 <b id="finS">5</b> 秒，可以把畫畫完 ✏️</div>`
+      :`<h3>🎉 ${esc(names)} 猜對了！</h3><div class="who">答案是 <span class="ans">${esc(G.word)}</span><br>讓 ${esc(nameOf(G.drawer))} 把畫畫完…（<b id="finS">5</b>）</div>`;}
+  else fc.style.display='none';
+  // 結果（不遮畫）
+  const rc=$('resCard');
+  if(ph==='reveal'){rc.style.display='block';resUI();}else rc.style.display='none';
+  // 選題
+  if(ph==='pick'&&iDraw){if(changed){$('pickCat').textContent='主題：'+catIcon(G.cat)+' '+(G.cat||'');const l=$('pickList');l.innerHTML='';G.choices.forEach(c=>{const b=document.createElement('button');b.className='choice';b.textContent=c;b.onclick=()=>{hide('ovPick');act('pick',{w:c});};l.appendChild(b);});}show('ovPick');}else hide('ovPick');
+  if(ph==='pick'&&!iDraw){$('waitT').textContent=nameOf(G.drawer)+' 正在選題目';$('waitCat').textContent='這題主題：'+catIcon(G.cat)+' '+(G.cat||'');show('ovWait');}else hide('ovWait');
+  if(changed&&ph==='draw'&&!iDraw){$('gi').value='';}
+  if(changed&&ph==='reveal')setTimeout(()=>rc.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
+function hintText(word,el){const n=word.length;let s='';for(let i=0;i<n;i++)s+=(el>0.5&&i===0)||(el>0.75&&i===n-1&&n>2)?word[i]:'＿';return s;}
 function updateHint(){
-  const n=G.word.length;const el=G.dur?1-Math.max(0,G.endsAt-Date.now())/G.dur:0;
-  let s='';for(let i=0;i<n;i++)s+=(el>0.5&&i===0)||(el>0.75&&i===n-1&&n>2)?G.word[i]:'＿';
-  const h=`${catIcon(G.cat)} 主題：${G.cat||'?'}・${n} 個字`+(el>0.5?'・有提示囉':'');
+  const el=G.dur?1-Math.max(0,G.endsAt-Date.now())/G.dur:0;const s=hintText(G.word,el);
+  const h=`${catIcon(G.cat)} 主題：${G.cat||'?'}・${G.word.length} 個字`+(el>0.5?'・有提示囉':'');
   const w=$('gWord');const k=s+h;if(w.dataset.k!==k){w.dataset.k=k;w.innerHTML=`<div class="w">${s}</div><div class="h">${h}</div>`;}
 }
 function resUI(){const L=G.last;if(!L)return;
-  $('rWord').textContent=L.word;$('rIcon').textContent=L.ok?'🎉':'⏰';
-  $('rTitle').textContent=L.ok?`${nameOf(other(L.drawer))} 猜對了！`:'時間到～';
-  let b='';
-  if(L.ok)b=`只用了 <b>${L.secs}</b> 秒<br>`;
-  if(G.mode==='battle'&&L.ok)b+=`${nameOf(other(L.drawer))} +${L.gp}　${nameOf(L.drawer)} +${L.dp}`;
-  if(G.mode==='coop')b+=`<div class="stars">${L.st?'⭐'.repeat(L.st)+'☆'.repeat(3-L.st):'☆☆☆'}</div>`;
-  if(!L.ok&&G.mode==='battle')b+='這題兩個人都沒得分';
-  $('rBody').innerHTML=b;
-}
+  let h=`<h3>${L.ok?(L.all?'🎉 大家都猜對了！':'🎉 有人猜對了！'):'⏰ 這題沒人猜到'}</h3><div>答案是 <span class="ans">${esc(L.word)}</span></div><div class="who">`;
+  L.correct.forEach(c=>{h+=`${c.id===me.cid?'你':esc(nameOf(c.id))}：${c.secs} 秒猜中${G.mode==='battle'?` +${c.pts}`:''}<br>`;});
+  if(G.mode==='battle'&&L.ok)h+=`${esc(nameOf(L.drawer))}（畫的人）+${Math.round(50/Math.max(1,G.players.length-1))*L.correct.length}`;
+  if(G.mode==='coop')h+=`<span class="stars">${'⭐'.repeat(L.st)+'☆'.repeat(3-L.st)}</span>`;
+  h+=`</div><div class="note" id="rNext"></div>`;$('resCard').innerHTML=h;}
 function tickUI(){
+  if(Solo.on){Solo.tick();return;}
   if(!G||!$('game').classList.contains('on'))return;
   const rem=G.endsAt?Math.max(0,G.endsAt-Date.now()):0;const f=G.dur?rem/G.dur:0;
   const t=$('gT');t.style.width=(f*100)+'%';t.style.background=f>0.5?'var(--green)':f>0.2?'var(--yel)':'var(--red)';
-  if(G.phase==='draw'&&G.drawer!==me.role)updateHint();
-  if(G.phase==='pick'&&G.drawer===me.role)$('pickT').textContent=`還有 ${Math.ceil(rem/1000)} 秒`;
-  if(G.phase==='reveal')$('rNext').textContent=G.round>=G.rounds?`${Math.ceil(rem/1000)} 秒後看結果`:`${Math.ceil(rem/1000)} 秒後換 ${nameOf(G.drawer==='host'?'guest':'host')} 畫`;
+  if(G.phase==='draw'&&G.drawer!==me.cid&&!iGuessed())updateHint();
+  if(G.phase==='pick'&&G.drawer===me.cid)$('pickT').textContent=`還有 ${Math.ceil(rem/1000)} 秒`;
+  if(G.phase==='finish'&&$('finS'))$('finS').textContent=Math.ceil(rem/1000);
+  if(G.phase==='reveal'&&$('rNext')){const nx=G.players[G.round%G.players.length];
+    $('rNext').textContent=G.round>=G.rounds?`${Math.ceil(rem/1000)} 秒後看結果`:`慢慢欣賞～ ${Math.ceil(rem/1000)} 秒後換 ${nx?nx.name:''} 畫`;}
 }
-function connUI(){const n=Net.up();const t=n?'🟢 已連線':'🟡 連線中…';$('lConn').textContent=t;$('gConn').textContent=n?'🟢':'🟡';peerUI();}
-function peerUI(){const away=me.role&&G&&G.guestCid&&peerSeen&&Date.now()-peerSeen>12000&&G.phase!=='lobby';$('gWarn').style.display=away?'block':'none';}
+function connUI(){const n=Net.up();$('lConn').textContent=n?'🟢 已連線':'🟡 連線中…';$('gConn').textContent=n?'🟢':'🟡';peerUI();}
+function peerUI(){if(!G||!me.role||G.phase==='lobby'){$('gWarn').style.display='none';return;}
+  const away=G.players.filter(p=>p.id!==me.cid&&seenAt[p.id]&&Date.now()-seenAt[p.id]>12000);
+  $('gWarn').style.display=away.length?'block':'none';$('gWarn').textContent=away.map(p=>p.name).join('、')+' 好像斷線了，等一下…（請保持畫面開著）';}
 
 /* ---- 畫作收藏 ---- */
 function snap(){try{const S=360,c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,S,S);x.drawImage(cv,0,0,S,S);
-  gallery[G.round]={img:c.toDataURL('image/jpeg',0.82),word:G.word,drawer:nameOf(G.drawer),ok:G.last&&G.last.ok};ss.set('hh_gal',gallery);}catch(e){}}
+  gallery[G.round]={img:c.toDataURL('image/jpeg',0.82),word:G.word,drawer:nameOf(G.drawer),ok:G.last&&G.last.ok};ss.set('hh2_gal',gallery);}catch(e){}}
 function endUI(){
-  if(G.mode==='battle'){const a=G.scores.host,b=G.scores.guest;
-    $('eIcon').textContent=a===b?'🤝':'🏆';
-    $('eTitle').textContent=a===b?'平手！默契一樣好':`${a>b?G.names.host:G.names.guest} 贏了！`;
-    $('eBody').innerHTML=`${G.names.host} <b>${a}</b> 分　vs　${G.names.guest} <b>${b}</b> 分`;}
+  $('galWrap').style.display='block';
+  if(G.mode==='battle'){const r=G.players.slice().sort((a,b)=>(G.scores[b.id]||0)-(G.scores[a.id]||0));
+    const top=G.scores[r[0].id]||0;const winners=r.filter(p=>(G.scores[p.id]||0)===top);
+    $('eIcon').textContent=winners.length>1?'🤝':'🏆';
+    $('eTitle').textContent=winners.length>1?winners.map(p=>p.name).join('、')+' 平手！':`${r[0].name} 贏了！`;
+    const md=['🥇','🥈','🥉'];$('eBody').innerHTML='<div class="rank">'+r.map((p,i)=>`${md[i]} ${esc(p.name)}　<b>${G.scores[p.id]||0}</b> 分`).join('<br>')+'</div>';}
   else{const max=G.rounds*3,p=G.stars/max;
     const t=p>=0.85?'心有靈犀・默契滿分':p>=0.6?'最佳拍檔':p>=0.3?'越來越有默契':'下次一定更好';
-    $('eIcon').textContent=p>=0.6?'💞':'🌱';$('eTitle').textContent=t;$('eBody').innerHTML=`兩個人一起拿到 <b>${G.stars}</b> / ${max} 顆 ⭐`;}
+    $('eIcon').textContent=p>=0.6?'💞':'🌱';$('eTitle').textContent=t;$('eBody').innerHTML=`大家一起拿到 <b>${G.stars}</b> / ${max} 顆 ⭐`;}
   const g=$('gal');g.innerHTML='';Object.keys(gallery).sort((a,b)=>a-b).forEach(k=>{const it=gallery[k];const d=document.createElement('div');
-    d.innerHTML=`<img src="${it.img}"><b>${it.word}</b>${it.drawer} 畫${it.ok?'・猜中 ✅':''}`;g.appendChild(d);});
+    d.innerHTML=`<img src="${it.img}"><b>${esc(it.word)}</b>${esc(it.drawer)} 畫${it.ok?'・猜中 ✅':''}`;g.appendChild(d);});
   if(!g.children.length)g.innerHTML='<p class="note">（這次沒有存到畫作）</p>';
   $('bSaveImg').style.display=Object.keys(gallery).length?'block':'none';
-  $('bAgain').textContent=me.role==='host'?'再玩一次':'請房主再開一局';$('bAgain').disabled=me.role!=='host';
+  $('bAgain').textContent=isHost()?'再玩一次':'請房主再開一局';$('bAgain').disabled=!isHost();
 }
 $('bSaveImg').onclick=()=>{const ks=Object.keys(gallery).sort((a,b)=>a-b);const cols=2,cell=360,pad=24,lab=56,head=110;
   const rows=Math.ceil(ks.length/cols);const W=cols*cell+(cols+1)*pad,H=head+rows*(cell+lab+pad)+pad;
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#FFF4E6';x.fillRect(0,0,W,H);
   x.fillStyle='#E8453C';x.font='900 52px "PingFang TC",sans-serif';x.textAlign='center';x.fillText('畫畫猜猜',W/2,66);
-  x.fillStyle='#8a7464';x.font='26px "PingFang TC",sans-serif';x.fillText(`${G.names.host} × ${G.names.guest}・${new Date().toLocaleDateString('zh-TW')}`,W/2,100);
+  x.fillStyle='#8a7464';x.font='26px "PingFang TC",sans-serif';x.fillText(`${G.players.map(p=>p.name).join(' × ')}・${new Date().toLocaleDateString('zh-TW')}`,W/2,100);
   let n=0;const imgs=ks.map(k=>{const im=new Image();im.onload=()=>{if(++n===ks.length)done();};im.src=gallery[k].img;return im;});
   function done(){ks.forEach((k,i)=>{const cx=pad+(i%cols)*(cell+pad),cy=head+Math.floor(i/cols)*(cell+lab+pad);
     x.fillStyle='#fff';x.fillRect(cx-4,cy-4,cell+8,cell+lab+8);x.drawImage(imgs[i],cx,cy,cell,cell);
@@ -792,17 +921,72 @@ $('bSaveImg').onclick=()=>{const ks=Object.keys(gallery).sort((a,b)=>a-b);const 
     $('imgOut').src=c.toDataURL('image/png');show('ovImg');}
 };
 
+/* ========== 單人模式：電腦畫・我來猜 ========== */
+const SVGNS='http://www.w3.org/2000/svg';
+const toD=s=>{if(s[0]==='o'){const [x,y,r]=s.slice(2).split(' ').map(Number);return `M${x-r} ${y} a${r} ${r} 0 1 0 ${2*r} 0 a${r} ${r} 0 1 0 ${-2*r} 0`;}return s;};
+const Solo={on:false,total:10,limit:45,drawT:24,
+  start(){this.on=true;this.list=shuffle(PICS).slice(0,this.total);this.i=-1;this.score=0;this.right=0;screen('solo');this.fit();this.next();wake();},
+  stop(){this.on=false;},
+  fit(){const wrap=$('sWrap');const S=sideFit(wrap,330);wrap.style.width=S+'px';wrap.style.height=S+'px';},
+  next(){this.i++;if(this.i>=this.list.length){this.end();return;}
+    const it=this.it=this.list[this.i];this.done=false;this.opt=false;this.wrong=[];this.t0=Date.now();
+    const others=shuffle(PICS.filter(x=>x.w!==it.w&&x.c===it.c)).concat(shuffle(PICS.filter(x=>x.c!==it.c)));
+    this.opts=shuffle([it.w,...others.slice(0,3).map(x=>x.w)]);
+    const svg=$('sSvg');svg.innerHTML='';const col=PIC_COL[it.w]||'#2b2b2b';
+    this.paths=it.p.map(s=>{const p=document.createElementNS(SVGNS,'path');p.setAttribute('d',toD(s));p.setAttribute('fill','none');p.setAttribute('stroke',col);
+      p.setAttribute('stroke-width','2.6');p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');svg.appendChild(p);
+      const L=p.getTotalLength()+1;p.style.strokeDasharray=L;p.style.strokeDashoffset=L;return {p,L};});
+    this.sum=this.paths.reduce((a,b)=>a+b.L,0);
+    $('soRound').textContent=`第 ${this.i+1}/${this.total} 題`;$('soScore').textContent=this.score+' 分';
+    $('soGuess').style.display='block';$('soRes').style.display='none';$('sOpts').style.display='none';$('sOptsB').style.display='block';$('sgi').value='';$('sFeed').innerHTML='';
+    $('soWord').dataset.k='';},
+  drawTo(f){let left=this.sum*Math.min(1,f);this.paths.forEach(o=>{const d=Math.max(0,Math.min(o.L,left));left-=o.L;o.p.style.strokeDashoffset=o.L-d;});},
+  tick(){if(!$('solo').classList.contains('on')||!this.it||this.done)return;
+    const el=(Date.now()-this.t0)/1000;this.drawTo(el/this.drawT);
+    const f=Math.max(0,1-el/this.limit);const t=$('soT');t.style.width=(f*100)+'%';t.style.background=f>0.5?'var(--green)':f>0.2?'var(--yel)':'var(--red)';
+    const w=$('soWord');const s=hintText(this.it.w,el/this.limit);const h=`${catIcon(this.it.c)} 主題：${this.it.c}・${this.it.w.length} 個字`;
+    if(w.dataset.k!==s+h){w.dataset.k=s+h;w.innerHTML=`<div class="w">${s}</div><div class="h">${h}</div>`;}
+    if(el>=this.limit)this.finish(false);},
+  guess(text){text=(text||'').trim();if(!text||this.done)return;
+    if(isRight(this.it.al,text)){this.finish(true);return;}
+    if(this.opts.includes(text)){this.wrong.push(text);this.showOpts();}
+    bubble('sFeed',' me',text);},
+  showOpts(){this.opt=true;$('sOptsB').style.display='none';const o=$('sOpts');o.style.display='grid';o.innerHTML='';
+    this.opts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.disabled=this.wrong.includes(t);b.onclick=()=>this.guess(t);o.appendChild(b);});},
+  finish(ok){if(this.done)return;this.done=true;this.drawTo(1);
+    const secs=Math.round((Date.now()-this.t0)/1000);let pts=0;
+    if(ok){pts=Math.max(10,Math.round(100*Math.max(0,1-secs/this.limit)*(this.opt?0.5:1)));this.score+=pts;this.right++;}
+    $('soScore').textContent=this.score+' 分';$('soGuess').style.display='none';
+    $('soWord').innerHTML=`<div class="h">${catIcon(this.it.c)} ${this.it.c}・答案</div><div class="w">${this.it.w}</div>`;$('soWord').dataset.k='';
+    const r=$('soRes');r.style.display='block';
+    r.innerHTML=`<h3>${ok?'🎉 答對了！':'⏰ 時間到～'}</h3><div>答案是 <span class="ans">${this.it.w}</span></div><div class="who">${ok?`${secs} 秒猜中 +${pts}`:'下一題加油！'}</div><button class="btn" id="sNext">${this.i+1>=this.total?'看結果':'下一題 ▶'}</button>`;
+    $('sNext').onclick=()=>this.next();},
+  end(){const best=+(ls.get('hh_solo_best')||0);const nb=this.score>best;if(nb)ls.set('hh_solo_best',this.score);
+    screen('end');$('galWrap').style.display='none';
+    $('eIcon').textContent=this.right>=8?'🏆':this.right>=5?'🎉':'🌱';
+    $('eTitle').textContent=`猜中 ${this.right} / ${this.total} 題`;
+    $('eBody').innerHTML=`得到 <b>${this.score}</b> 分<br><span class="note">${nb?'🎊 新紀錄！':'最高紀錄：'+Math.max(best,this.score)+' 分'}</span>`;
+    $('bAgain').textContent='再玩一次';$('bAgain').disabled=false;}
+};
+$('bSolo').onclick=()=>{ls.set('hh_name',$('nm').value.trim());Solo.start();};
+$('sSend').onclick=()=>{Solo.guess($('sgi').value);$('sgi').value='';};
+$('sgi').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('sSend').click();}});
+$('sOptsB').onclick=()=>Solo.showOpts();
+$('sSkip').onclick=()=>Solo.finish(false);
+$('bSoQuit').onclick=()=>{if(confirm('要離開單人遊戲嗎？')){Solo.stop();screen('home');}};
+const _leave2=$('bLeave2').onclick;$('bLeave2').onclick=()=>{if(Solo.on){Solo.stop();screen('home');return;}_leave2();};
+
 /* ---- 螢幕常亮 ---- */
 let wl=null;async function wake(){try{if(navigator.wakeLock&&!wl&&document.visibilityState==='visible'){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>wl=null);}}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&me.role){wake();if(me.role==='guest')Net.send(G?'sync':'hello',{name:me.name});else if(G)push();}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(Solo.on)wake();if(me.role){wake();if(me.role==='guest')Net.send(G?'sync':'hello',{name:me.name});else if(G)push();}}});
 
 /* ========== 啟動 ========== */
 (function init(){
   $('nm').value=ls.get('hh_name')||'';
   const room=(qs.get('room')||'').replace(/\D/g,'');
   if(room.length===4){$('jc').value=room;$('bCreate').classList.add('sec');}
-  const s=ss.get('hh_sess');
-  if(s&&s.role){me=s;gallery=ss.get('hh_gal')||{};Net.cid=me.cid;if(me.role==='host'){G=ss.get('hh_G')||newGame();}Net.connect(me.code);render();}
+  const s=ss.get('hh2_sess');
+  if(s&&s.role){me=s;gallery=ss.get('hh2_gal')||{};Net.cid=me.cid;if(isHost()){G=ss.get('hh2_G')||newGame();}Net.connect(me.code);render();}
   if(typeof mqtt==='undefined'){toast('載入失敗，請重新整理',5000);}
 })();
 </script>
